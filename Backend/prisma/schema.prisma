@@ -1,0 +1,41 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = "postgresql://neondb_owner:npg_dvtXDl1R7yTk@ep-royal-night-a1cfbdfv-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
+}
+
+model unknown{
+  id String @id @default(cuid())
+  adhar String @unique
+  phoneNumber String @unique
+  otp String
+}
+
+model Asset {
+  id        Int      @id @default(autoincrement())
+  type      String
+  category  String
+  point       Unsupported("geometry(Point, 4326)")?
+  line        Unsupported("geometry(LineString, 4326)")?// PostGIS type
+  kpin String
+  frequency Int
+  status    String
+  Images String
+  Details String
+}
+
+model ModeComplaint {
+  id           Int      @id @default(autoincrement())
+  complaintId  String   @unique
+  embedding    Unsupported("vector(1536)") 
+}

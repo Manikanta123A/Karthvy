@@ -1,0 +1,26 @@
+{
+  "name": "backend",
+  "version": "1.0.0",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "nodemon index.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@clerk/clerk-js": "^5.85.0",
+    "@prisma/client": "^6.15.0",
+    "@vonage/server-sdk": "^3.24.0",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.1",
+    "express": "^5.1.0",
+    "expressjs": "^1.0.1",
+    "mongodb": "^6.18.0",
+    "mongoose": "^8.18.0",
+    "nodemon": "^3.1.10",
+    "prisma": "^6.14.0"
+  }
+}

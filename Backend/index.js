@@ -4,6 +4,7 @@ import dotenv from "dotenv";
 dotenv.config();
 import mongoose from "mongoose";
 import authRouter from "./routes/authRouter.js";
+import assestRouter from './routes/assestRouter.js'
 
 
 
@@ -43,4 +44,5 @@ app.get('/health', (req, res) => {
 
 // Routes
 app.use("/api/auth", authRouter);
+app.use("/api/assets",assestRouter);
 

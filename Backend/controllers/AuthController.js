@@ -50,21 +50,7 @@ export const login = async (req, res) => {
       otp: otp, // For testing purposes; remove in production
       userType: user ? "user" : "personnel"
     });
-
-    // Send OTP via SMS
-    // const phoneNumber = user ? user.PhoneNumber : personnel.phoneNumber;
-    // const text = `Your OTP for login is ${otp}`;
     
-    // try {
-    //   await vonage.sms.send({ to: phoneNumber, from, text });
-    //   return res.status(200).json({ 
-    //     message: "OTP sent successfully",
-    //     userType: user ? "user" : "personnel"
-    //   });
-    // } catch (smsError) {
-    //   console.error("SMS sending error:", smsError);
-    //   return res.status(500).json({ error: "Failed to send OTP" });
-    // }
   } catch (error) {
     console.error("Login error:", error);
     return res.status(500).json({ error: "Internal server error" });

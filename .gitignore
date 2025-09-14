@@ -30,3 +30,45 @@ backend/**/*.tsbuildinfo
 
 # Optional: coverage reports (if using testing)
 coverage/
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# FastAPI / Python backend specific
+*.log
+*.sqlite3
+*.db
+*.egg-info/
+*.egg
+*.pytest_cache/
+.cache/
+.coverage
+htmlcov/
+.tox/
+
+# IDE specific files
+.vscode/
+.idea/
+
+# macOS specific
+.DS_Store
+
+# Logs
+*.log
+
+# Python virtual environments
+.env
+.python-version
+

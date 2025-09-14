@@ -1,53 +1,64 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { MapContainer, TileLayer, FeatureGroup, Marker, Popup, useMapEvents } from 'react-leaflet';
-import { EditControl } from 'react-leaflet-draw';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
-import 'leaflet-draw/dist/leaflet.draw.css';
-import axios from 'axios'; // For dummy POST request
+import React, { useState, useRef, useEffect } from "react";
+import {
+  MapContainer,
+  TileLayer,
+  FeatureGroup,
+  Marker,
+  Popup,
+  useMapEvents,
+} from "react-leaflet";
+import { EditControl } from "react-leaflet-draw";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
+import "leaflet-draw/dist/leaflet.draw.css";
+import axios from "axios";
 
 // Fix for Leaflet's default icon issue with Webpack/Vite
-delete L.Icon.Default.prototype._getIconUrl;
+// @ts-ignore: _getIconUrl is not typed in leaflet
+delete (L.Icon.Default.prototype as any)._getIconUrl;
 L.Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png',
-  iconUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png',
-  shadowUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png',
+  iconRetinaUrl:
+    "https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png",
+  iconUrl: "https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png",
+  shadowUrl: "https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png",
 });
 
 const RegisterAsset: React.FC = () => {
-  const [assetType, setAssetType] = useState<string>('');
-  const [assetDetails, setAssetDetails] = useState<string>('');
-  const [pictures, setPictures] = useState<string>(''); // For now, a dummy URL or text
+  const [assetType, setAssetType] = useState<string>("");
+  const [assetDetails, setAssetDetails] = useState<string>("");
+  const [pictures, setPictures] = useState<string>("");
   const [drawnItems, setDrawnItems] = useState<any>(null);
   const featureGroupRef = useRef<L.FeatureGroup>(null);
-  const [currentLocation, setCurrentLocation] = useState<[number, number] | null>(null);
+  const [currentLocation, setCurrentLocation] = useState<
+    [number, number] | null
+  >(null);
 
   useEffect(() => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
-          setCurrentLocation([position.coords.latitude, position.coords.longitude]);
+          setCurrentLocation([
+            position.coords.latitude,
+            position.coords.longitude,
+          ]);
         },
         (error) => {
           console.error("Error getting current location: ", error);
-          // Default to a central location if geolocation fails
-          setCurrentLocation([20.5937, 78.9629]); // Central India as a fallback
+          setCurrentLocation([20.5937, 78.9629]); // fallback: Central India
         }
       );
     } else {
-      console.log("Geolocation is not supported by this browser.");
-      // Default to a central location if geolocation is not supported
-      setCurrentLocation([20.5937, 78.9629]); // Central India as a fallback
+      console.log("Geolocation not supported");
+      setCurrentLocation([20.5937, 78.9629]); // fallback
     }
   }, []);
 
-  // Custom component to handle map events
+  // Map Events Handler
   function MapEvents() {
     useMapEvents({
       locationfound: (e) => {
         setCurrentLocation([e.latlng.lat, e.latlng.lng]);
       },
-      // You can add more map event listeners here if needed
     });
     return null;
   }
@@ -55,20 +66,19 @@ const RegisterAsset: React.FC = () => {
   const onCreated = (e: any) => {
     const { layerType, layer } = e;
     console.log(`Drawn ${layerType}:`, layer.toGeoJSON());
-    // Store the drawn layer data
     if (featureGroupRef.current) {
       featureGroupRef.current.addLayer(layer);
       setDrawnItems(featureGroupRef.current.toGeoJSON());
     }
   };
 
-  const onEdited = (e: any) => {
+  const onEdited = () => {
     if (featureGroupRef.current) {
       setDrawnItems(featureGroupRef.current.toGeoJSON());
     }
   };
 
-  const onDeleted = (e: any) => {
+  const onDeleted = () => {
     if (featureGroupRef.current) {
       setDrawnItems(featureGroupRef.current.toGeoJSON());
     }
@@ -77,58 +87,76 @@ const RegisterAsset: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!drawnItems) {
+    if (!drawnItems || drawnItems.features.length === 0) {
       alert("Please draw an asset on the map before submitting.");
       return;
     }
 
-    const assetData = {
+    const geometryType = drawnItems.features[0].geometry.type;
+    let endpoint = "";
+    let assetData: any = {
       type: assetType,
-      details: assetDetails,
-      pictures: pictures, // Placeholder for actual image upload
-      geometry: drawnItems, // GeoJSON data of the drawn asset
-      // For now, let's also include the current location as a point if available
-      currentLocation: currentLocation ? { type: "Point", coordinates: [currentLocation[1], currentLocation[0]] } : null,
+      category: assetType || "General",
+      kpin: "N/A",
+      frequency: 0,
+      status: "Pending",
+      Images: pictures,
+      Details: assetDetails,
     };
+
+    if (geometryType === "Point") {
+      const [longitude, latitude] =
+        drawnItems.features[0].geometry.coordinates;
+      assetData = { ...assetData, longitude, latitude };
+      endpoint = "/api/assets/point";
+    } else if (geometryType === "LineString") {
+      const coordinates = drawnItems.features[0].geometry.coordinates;
+      assetData = { ...assetData, coordinates };
+      endpoint = "/api/assets/linestring";
+    } else {
+      alert("Unsupported geometry type. Draw a Point or LineString.");
+      return;
+    }
 
     console.log("Submitting asset data:", assetData);
 
-    // Dummy POST request to a placeholder URL
     try {
-      const response = await axios.post('https://jsonplaceholder.typicode.com/posts', assetData);
-      console.log("Dummy API Response:", response.data);
-      alert("Asset submitted successfully (dummy request)!");
-      // Clear form and map after submission
-      setAssetType('');
-      setAssetDetails('');
-      setPictures('');
+      const response = await axios.post(
+        `http://localhost:4000${endpoint}`,
+        assetData
+      );
+      console.log("API Response:", response.data);
+      alert("Asset submitted successfully!");
+      setAssetType("");
+      setAssetDetails("");
+      setPictures("");
       if (featureGroupRef.current) {
         featureGroupRef.current.clearLayers();
         setDrawnItems(null);
       }
     } catch (error) {
-      console.error("Error submitting dummy asset:", error);
-      alert("Failed to submit asset (dummy request). Check console for details.");
+      console.error("Error submitting asset:", error);
+      alert("Failed to submit asset. Check console.");
     }
   };
 
   if (!currentLocation) {
-    return <div className="flex items-center justify-center min-h-screen text-xl">Loading map and current location...</div>;
+    return (
+      <div className="flex items-center justify-center min-h-screen text-xl">
+        Loading map and current location...
+      </div>
+    );
   }
 
   return (
     <div className="flex flex-col h-screen p-4 bg-gray-100">
-      <h1 className="text-3xl font-bold text-center mb-6 text-[#0a3d91]">Register New Asset</h1>
-      
-      {/* Overall Instructions */}
-      <p className="text-center text-gray-700 mb-8 max-w-2xl mx-auto">
-        Follow these two simple steps to register your asset: <strong>1. Draw on the map</strong> to mark its location, then <strong>2. Fill in the details</strong> in the form.
-      </p>
+      <h1 className="text-3xl font-bold text-center mb-6 text-[#0a3d91]">
+        Register New Asset
+      </h1>
 
-      <div className="flex-grow flex flex-col md:flex-row gap-4">
-        {/* Map Container */}
-        <div className="flex-grow md:w-3/5 w-full h-80 md:h-full rounded-lg shadow-md overflow-hidden">
-          <h2 className="text-xl font-semibold text-center py-2 bg-white text-[#0a3d91] border-b border-gray-200">1. Draw Your Asset on the Map</h2>
+      <div className="flex-grow flex flex-col lg:flex-row gap-4">
+        {/* Map */}
+        <div className="h-1/2 sm:h-[50vh] md:h-[50vh] lg:h-full lg:w-3/5 flex-grow rounded-lg shadow-md overflow-hidden">
           <MapContainer
             center={currentLocation}
             zoom={13}
@@ -136,7 +164,7 @@ const RegisterAsset: React.FC = () => {
             className="w-full h-full"
           >
             <TileLayer
-              attribution='&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'
+              attribution='&copy; <a href="http://osm.org/copyright">OpenStreetMap</a>'
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             />
             <MapEvents />
@@ -155,31 +183,40 @@ const RegisterAsset: React.FC = () => {
                   rectangle: false,
                   circle: false,
                   circlemarker: false,
-                  // Enable point and line drawing
                   marker: true,
                   polyline: true,
                   polygon: {
-                    allowIntersection: false, // Restricts shapes to simple polygons
+                    allowIntersection: false,
                     drawError: {
-                      color: '#e1edce',
-                      message: '<strong>Oh snap!</strong>: Change something...'
+                      color: "#e1edce",
+                      message: "<strong>Oh snap!</strong>: Change something...",
                     },
                     shapeOptions: {
-                      color: '#bada55'
-                    }
-                  }
+                      color: "#bada55",
+                    },
+                  },
                 }}
               />
             </FeatureGroup>
           </MapContainer>
         </div>
 
-        {/* Asset Details Form */}
-        <div className="md:w-2/5 w-full p-6 bg-white rounded-lg shadow-md flex flex-col">
-          <h2 className="text-xl font-semibold mb-4 text-[#0a3d91]">2. Fill in Asset Details</h2>
-          <form onSubmit={handleSubmit} className="space-y-4 flex-grow flex flex-col">
+        {/* Form */}
+        <div className="h-1/2 sm:h-[50vh] md:h-[50vh] lg:h-full lg:w-2/5 p-6 bg-white rounded-lg shadow-md flex flex-col">
+          <h2 className="text-2xl font-semibold mb-4 text-[#0a3d91]">
+            Asset Details
+          </h2>
+          <form
+            onSubmit={handleSubmit}
+            className="space-y-4 flex-grow flex flex-col"
+          >
             <div>
-              <label htmlFor="assetType" className="block text-sm font-medium text-gray-700">Asset Type</label>
+              <label
+                htmlFor="assetType"
+                className="block text-sm font-medium text-gray-700"
+              >
+                Asset Type
+              </label>
               <input
                 type="text"
                 id="assetType"
@@ -190,7 +227,12 @@ const RegisterAsset: React.FC = () => {
               />
             </div>
             <div>
-              <label htmlFor="pictures" className="block text-sm font-medium text-gray-700">Pictures (URL/Text)</label>
+              <label
+                htmlFor="pictures"
+                className="block text-sm font-medium text-gray-700"
+              >
+                Pictures (URL/Text)
+              </label>
               <input
                 type="text"
                 id="pictures"
@@ -200,19 +242,24 @@ const RegisterAsset: React.FC = () => {
               />
             </div>
             <div className="flex-grow">
-              <label htmlFor="assetDetails" className="block text-sm font-medium text-gray-700">Details</label>
+              <label
+                htmlFor="assetDetails"
+                className="block text-sm font-medium text-gray-700"
+              >
+                Details
+              </label>
               <textarea
                 id="assetDetails"
                 value={assetDetails}
                 onChange={(e) => setAssetDetails(e.target.value)}
                 rows={4}
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 flex-grow resize-none"
+                className="mt-1 block w-full border text-black border-gray-300 rounded-md shadow-sm p-2 flex-grow"
                 required
               ></textarea>
             </div>
             <button
               type="submit"
-              className="w-full bg-orange-400 text-white p-3 rounded-md font-semibold hover:bg-orange-500 transition-colors mt-auto"
+              className="w-full bg-orange-400 text-white p-3 rounded-md font-semibold hover:bg-orange-500 transition-colors"
             >
               Add Asset
             </button>

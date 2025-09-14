@@ -1,10 +1,8 @@
 import './App.css'
-import Home from './Home.tsx'
 import Test from './test.tsx'
-import Test2 from './test2.tsx'
-import Chat from './Chat.tsx'
+import Chat from './Users/Chat.tsx'
 import Login from './Login.tsx'
-import ComplaintsPage from './ComplaintsPage.tsx'; // Import the new ComplaintsPage
+import ComplaintsPage from './Users/ComplaintsPage.tsx'; // Import the new ComplaintsPage
 import { createBrowserRouter,RouterProvider} from 'react-router-dom'
 import { TranslationProvider } from './translationContext.tsx'
 import LanguageSw from './components/ui/LanguageSwitcher.tsx'

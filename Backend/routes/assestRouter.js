@@ -6,3 +6,14 @@
 //to approve the assests 
 //to reject the assests
 //to show all the assests which are not approved to their respective ae
+
+
+
+import express from 'express';
+const router = express.Router();
+import AssestController from '../controllers/AssestsController.js';
+
+router.post('/point', AssestController.addPointAsset);
+router.post('/linestring', AssestController.addLineStringAsset);
+
+export default router;

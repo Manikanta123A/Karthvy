@@ -1,6 +1,10 @@
 import React, { useState } from 'react';
-import ComplaintCard from './ComplaintCard';
+import ComplaintCard from '../ComplaintCard';
+import UserNav from './UserNav';
 
+
+
+//Fix Scrollint Issues
 interface Complaint {
   id: string;
   image: string;
@@ -65,23 +69,27 @@ const ComplaintsPage: React.FC = () => {
 
 
   return (
-    <div className=" bg-white p-4 flex flex-col overflow-y-auto">
+    <>
+    <UserNav/>
+    <div className=" bg-white p-4 mt-20 flex flex-col ">
       <h1 className="text-3xl font-bold text-center mb-6 text-[#0a3d91]">My Complaints</h1>
 
-      <div className="flex justify-center space-x-2 mb-8">
-        {['All', 'Closed', 'Pending', 'Assigned', 'Working'].map((s) => (
-          <button
-            key={s}
-            onClick={() => setFilter(s as typeof filter)}
-            className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200
-              ${filter === s ? 'bg-[#0a3d91] text-white shadow-md' : 'bg-gray-200 text-white hover:bg-gray-300'}`}
-          >
-            {s}
-          </button>
-        ))}
-      </div>
+    <div className="flex justify-center mb-8">
+  <select
+    value={filter}
+    onChange={(e) => setFilter(e.target.value as typeof filter)}
+    className="px-5 py-4 rounded-md text-blue-600 text-xl font-bold bg-white border border-blue-300 shadow-sm focus:outline-none "
+  >
+    {['All', 'Closed', 'Pending', 'Assigned', 'Working'].map((s) => (
+      <option key={s} value={s} className='text-blue-600 text-xl'>
+        {s}
+      </option>
+    ))}
+  </select>
+</div>
 
-      <div className="md:max-w-4xl w-full mx-auto space-y-6 overflow-y-auto flex-grow">
+
+      <div className="md:max-w-4xl w-full mx-auto space-y-6 mb-10">
         {filteredComplaints.length > 0 ? (
           filteredComplaints.map(complaint => (
             <ComplaintCard key={complaint.id} complaint={complaint} />
@@ -91,6 +99,7 @@ const ComplaintsPage: React.FC = () => {
         )}
       </div>
     </div>
+    </>
   );
 };
 

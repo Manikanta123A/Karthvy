@@ -1,5 +1,7 @@
 import mongoose from "mongoose";
 
+
+
 const complainSchema = new mongoose.Schema({
     UserId:[{
         type: mongoose.Schema.Types.ObjectId,
@@ -15,10 +17,10 @@ const complainSchema = new mongoose.Schema({
         type: String,
         required: true,
     },
-    AssignedWorker:{
+    AssignedWorker:[{
         type:mongoose.Schema.Types.ObjectId,
         ref:"Personnel"
-    },
+    }],
     solutionReport:{
         type: String,
     },
@@ -41,7 +43,7 @@ const complainSchema = new mongoose.Schema({
     },
     currentLevel:{
         type:String,
-        enum:["L1/JE","AEE","EE","CE"],
+        enum:["L1","JE","AEE","EE","CE"],
     },
     comments:[{
         type: String

@@ -5,6 +5,7 @@ dotenv.config();
 import mongoose from "mongoose";
 import authRouter from "./routes/authRouter.js";
 import assestRouter from './routes/assestRouter.js'
+import complaintRouter from './routes/complaintRouter.js'
 
 
 
@@ -45,4 +46,4 @@ app.get('/health', (req, res) => {
 // Routes
 app.use("/api/auth", authRouter);
 app.use("/api/assets",assestRouter);
-
+app.use("/api/complaints",complaintRouter);

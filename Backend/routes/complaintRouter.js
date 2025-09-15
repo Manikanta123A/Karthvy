@@ -4,11 +4,13 @@
 
 import express from 'express';
 const router = express.Router();
-import ComplaintController from '../controllers/ComplaintController.js';
+import {getComplaintById, getMyComplaints, submitRating} from '../controllers/ComplaintController.js';
 
-// Route to retrieve all complaints
-router.get('/', ComplaintController.getAllComplaints);
-router.post('/complaints', ComplaintController.getMyComplaints);
+// // Route to retrieve all complaints
+// router.get('/', ComplaintController.getAllComplaints);
+router.post('/my', getMyComplaints);
+router.get('/id/:id', getComplaintById);
+router.post('/submit-rating', submitRating);
 
 
 export default router;

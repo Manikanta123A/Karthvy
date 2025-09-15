@@ -18,18 +18,9 @@ const personnelSchema = new mongoose.Schema({
     required: true,
     enum: ['AEE', 'JE', 'Lineman', 'EE', 'CEE'],
   },
-  zoneCode: {
-    type: String, 
-  },
-  districtCode: {
+  pkpin:{
     type: String,
-    required: true,
-  },
-  mandalCode: {
-    type: String,
-  },
-  villageCode: {
-    type: String,
+    required:true
   },
   hrDepartmentCode: {
     type: Number,

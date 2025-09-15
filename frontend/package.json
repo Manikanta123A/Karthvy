@@ -21,6 +21,7 @@
     "leaflet": "^1.9.4",
     "leaflet-draw": "^1.0.4",
     "lucide-react": "^0.539.0",
+    "mongoose": "^8.18.1",
     "path": "^0.12.7",
     "prop-types": "^15.8.1",
     "react": "^19.1.1",

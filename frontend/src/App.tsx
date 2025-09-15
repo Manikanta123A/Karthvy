@@ -2,11 +2,12 @@ import './App.css'
 import Test from './test.tsx'
 import Chat from './Users/Chat.tsx'
 import Login from './Login.tsx'
-import ComplaintsPage from './Users/ComplaintsPage.tsx'; // Import the new ComplaintsPage
+import ComplaintsPage from './Users/ComplaintsPage.tsx'; 
+import Complaints from './Users/Complaint.tsx';
 import { createBrowserRouter,RouterProvider} from 'react-router-dom'
 import { TranslationProvider } from './translationContext.tsx'
 import LanguageSw from './components/ui/LanguageSwitcher.tsx'
-import RegisterAsset from './RegisterAssest.tsx'
+import RegisterAsset from './lineman/RegisterAssest.tsx'
 
 
 
@@ -27,6 +28,9 @@ const router = createBrowserRouter([
   {
     path:'/complaints',
     element:<ComplaintsPage/>
+  },{
+    path:'/complaints/:id',
+    element:<Complaints/>
   },{
     path:"/asses",
     element:<RegisterAsset/>

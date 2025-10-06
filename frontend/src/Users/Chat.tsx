@@ -1,11 +1,14 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef } from 'react';
 import axios from 'axios';
 import gsap from 'gsap';
 import { useTranslation } from '../translationContext';
 import UserNav from './UserNav';
+import toast from 'react-hot-toast';
+import { useNavigate } from 'react-router-dom';
 
 function Chat() {
   const [isSending, setIsSending] = useState(false);
+  const navigate = useNavigate();
   const [selectedImages, setSelectedImages] = useState<File[]>([]);
   const [imagePreview, setImagePreview] = useState<string[]>([]);
   const [showSuccess, setShowSuccess] = useState(false);
@@ -16,11 +19,11 @@ function Chat() {
   const sendButtonRef = useRef<HTMLButtonElement>(null);
   const micIconRef = useRef<HTMLDivElement>(null);
 
- // WebSocket for AI backend
+  // WebSocket for AI backend
 
 
 
-const [isRecording, setIsRecording] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
   const [message, setMessage] = useState('');
   const wsRef = useRef<WebSocket | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -116,19 +119,32 @@ const [isRecording, setIsRecording] = useState(false);
 
     try {
       const formData = new FormData();
-      formData.append('message', message);
-      selectedImages.forEach((image, index) => {
-        formData.append(`image${index}`, image);
+      formData.append("problemReport", message);
+      formData.append("category", localStorage.getItem("selectedDepartment") || "");
+      formData.append("Problem", localStorage.getItem("selectedType") || "");
+      formData.append("SubProblem", localStorage.getItem("selectedSubtype") || "");
+      navigator.geolocation.getCurrentPosition(
+        async (pos) => {
+          const latitude = pos.coords.latitude;
+          const longitude = pos.coords.longitude;
+
+          formData.append("latitude", latitude.toString());
+          formData.append("longitude", longitude.toString());
+
+
+          selectedImages.forEach((image) => {
+        formData.append("images", image);  
       });
 
       // TODO: Replace with your actual API endpoint
-      const response = await axios.post('YOUR_API_ENDPOINT_HERE', formData, {
+      const response = await axios.post('http://localhost:4000/api/complaints/createComplaint', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
+        withCredentials: true,
       });
-
-      // Success animation
+      toast.success(response.data.message);
+      navigate('/')
       setShowSuccess(true);
       gsap.to('.success-message', {
         opacity: 1,
@@ -146,8 +162,23 @@ const [isRecording, setIsRecording] = useState(false);
         gsap.set('.success-message', { opacity: 0, y: 0 });
       }, 2000);
 
-    } catch (error) {
-      console.error('Error sending complaint:', error);
+        },
+        (err) => {
+          console.log(err);
+          alert("Please allow location access!");
+        }
+      );
+      // from geolocation
+
+      
+    } catch (err: any) {
+      if (err.response.data.error !== undefined) {
+        toast.error(err.response.data.error)
+        navigate("/");
+      }
+      else {
+        toast.error(err.response.data.message)
+      }
       alert(t('failedToSendComplaint'));
     } finally {
       setIsSending(false);
@@ -232,8 +263,8 @@ const [isRecording, setIsRecording] = useState(false);
                 ref={micButtonRef}
                 onClick={isRecording ? stopRecording : startRecording}
                 className={`flex-1 flex items-center justify-center gap-2 md:py-3 py-2 px-3 md:px-6 rounded-xl font-semibold transition-all duration-300 ${isRecording
-                    ? 'bg-red-500 text-white shadow-lg scale-105'
-                    : 'bg-gray-400 text-black hover:bg-gray-200'
+                  ? 'bg-red-500 text-white shadow-lg scale-105'
+                  : 'bg-gray-400 text-black hover:bg-gray-200'
                   }`}
               >
                 <div ref={micIconRef} className="w-5 h-5">
@@ -260,8 +291,8 @@ const [isRecording, setIsRecording] = useState(false);
                 onClick={handleSubmit}
                 disabled={isSending || (!message.trim() && selectedImages.length === 0)}
                 className={`flex-1 flex items-center justify-center gap-2 md:py-3 py-2 px-3 md:px-6 rounded-xl font-semibold transition-all duration-300 ${isSending || (!message.trim() && selectedImages.length === 0)
-                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                    : 'bg-[#0a3d91] text-white hover:bg-[#082a6b] shadow-lg hover:shadow-xl'
+                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  : 'bg-[#0a3d91] text-white hover:bg-[#082a6b] shadow-lg hover:shadow-xl'
                   }`}
               >
                 {isSending ? (
@@ -292,7 +323,7 @@ const [isRecording, setIsRecording] = useState(false);
               </div>
             </div>
           )}
-          
+
         </div>
       </div>
     </>

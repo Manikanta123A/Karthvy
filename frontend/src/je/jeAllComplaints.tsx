@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import JeCard from './complainCard';
-import type { Complaint } from './complainCard';
+import JeCard from './jeCard';
+import type { Complaint } from './jeCard';
 import axios from 'axios';
+import JeNavbar from './JeNavbar'; // Import the new JeNavbar component
 import { useTranslation } from '../translationContext';
-import LinemanNav from './linemanNav';
 
-const LinemanAllComplaints: React.FC = () => {
+const JeAllComplaints: React.FC = () => {
   const [complaints, setComplaints] = useState<Complaint[]>([]);
   const {currentLanguage} = useTranslation();
   const [statusFilter, setStatusFilter] = useState<
@@ -32,7 +32,7 @@ const LinemanAllComplaints: React.FC = () => {
 
     setLoading(true);
     try {
-      const response = await axios.post('http://localhost:4000/api/complaints/Lineman/All',{
+      const response = await axios.post('http://localhost:4000/api/complaints/viewallje',{
           status:statusFilter,
           language:currentLanguage,
           page: pageNumber,
@@ -95,7 +95,7 @@ const LinemanAllComplaints: React.FC = () => {
 
   return (
     <>
-    <LinemanNav category={complaintCategory?.toLowerCase() as 'electricity' | 'water' | 'municipal' | null}/>
+      <JeNavbar category={complaintCategory?.toLowerCase() as  'electricity' | 'water' | 'municipal' | null} />
       <div className="container mx-auto p-4 pt-20"> {/* Add padding-top to account for fixed navbar */}
         <h2 className="text-2xl font-bold mb-4">All Complaints (JE)</h2>
         <div className="mb-4 flex justify-center">
@@ -124,4 +124,4 @@ const LinemanAllComplaints: React.FC = () => {
   );
 };
 
-export default LinemanAllComplaints;
+export default JeAllComplaints;

@@ -3,10 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from './translationContext';
 import axios from 'axios';
 import gsap from 'gsap';
+import LanguageSw from './components/ui/LanguageSwitcher';
 
 export default function Login() {
   const [step, setStep] = useState<'aadhar' | 'otp'>('aadhar');
   const [aadharNumber, setAadharNumber] = useState('');
+  const [role, setRole] = useState('user'); // New state for role
   const [otp, setOtp] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -42,17 +44,15 @@ export default function Login() {
     setError('');
     
     try {
-      const response = await axios.post('http://localhost:4000/api/auth/request-otp', {
-        adharNumber: aadharNumber
-      }, { withCredentials: true, headers: {
-                    'Content-Type': "application/json"
-                } });
+      await axios.post('http://localhost:4000/api/auth/request-otp', {
+        adharNumber: aadharNumber,
+        role: role // Send selected role to backend
+      }, { withCredentials: true, headers: { 'Content-Type': "application/json" } });
       
       setSuccess(t('otpSent'));
       setStep('otp');
-      setCountdown(60); // 60 seconds countdown
+      setCountdown(60);
       
-      // Clear success message after 3 seconds
       setTimeout(() => setSuccess(''), 3000);
     } catch (err: any) {
       if (err.response?.status === 404) {
@@ -79,19 +79,29 @@ export default function Login() {
     try {
       const response = await axios.post('http://localhost:4000/api/auth/verify-otp', {
         adharNumber: aadharNumber,
-        otp: otp
+        otp: otp,
+        role: role 
       }, { withCredentials: true });
-      
+      console.log(role);
       setSuccess(t('loginSuccess'));
+      localStorage.setItem('category', response.data.category);
       
-      // Store user data in localStorage
-      localStorage.setItem('user', JSON.stringify(response.data.user));
-      
-      // Redirect to home page after 2 seconds
       setTimeout(() => {
-        navigate('/');
+        console.log(role)
+        if(role == "user"){
+          navigate('/')
+        }else if (role === "lineman"){
+          navigate("/linemanall")
+        }else if(role === "JE"){
+          navigate("/jeall")
+        }else if(role === "AEE"){
+          navigate("/AeeAll")
+        }
+        
+      
       }, 2000);
     } catch (err: any) {
+      console.log(err)
       if (err.response?.status === 401) {
         setError(t('invalidOtp'));
       } else {
@@ -110,7 +120,8 @@ export default function Login() {
     
     try {
       await axios.post('http://localhost:4000/api/auth/request-otp', {
-        adharNumber: aadharNumber
+        adharNumber: aadharNumber,
+        role: role
       }, { withCredentials: true });
       
       setSuccess(t('otpSent'));
@@ -136,29 +147,23 @@ export default function Login() {
 
   const handleAadharChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value.replace(/\D/g, '');
-    if (value.length <= 12) {
-      setAadharNumber(value);
-    }
+    if (value.length <= 12) setAadharNumber(value);
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-100 flex items-center justify-center p-4">
+      <LanguageSw />
       <div className="login-container w-full max-w-md">
-        {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-[#0a3d91] mb-2">KARTHVY</h1>
           <p className="text-gray-600">{t('loginSubtitle')}</p>
         </div>
 
-        {/* Form Container */}
         <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
           {step === 'aadhar' ? (
-            // Aadhar Input Step
             <form onSubmit={handleAadharSubmit} className="space-y-6">
               <div>
-                <label htmlFor="aadhar" className="block text-sm font-medium text-gray-700 mb-2">
-                  {t('aadharNumber')}
-                </label>
+                <label htmlFor="aadhar" className="block text-sm font-medium text-gray-700 mb-2">{t('aadharNumber')}</label>
                 <input
                   type="text"
                   id="aadhar"
@@ -169,6 +174,23 @@ export default function Login() {
                   maxLength={14}
                   disabled={isLoading}
                 />
+              </div>
+
+              {/* Role dropdown */}
+              <div>
+                <label htmlFor="role" className="block text-sm font-medium text-gray-700 mb-2">Select Role</label>
+                <select
+                  id="role"
+                  value={role}
+                  onChange={(e) => setRole(e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0a3d91] focus:border-transparent transition-all duration-200 text-black"
+                  disabled={isLoading}
+                >
+                  <option value="user">User</option>
+                  <option value="lineman">Lineman</option>
+                  <option value="JE">JE</option>
+                  <option value="AEE">AEE</option>
+                </select>
               </div>
 
               {error && (
@@ -193,7 +215,7 @@ export default function Login() {
               </button>
             </form>
           ) : (
-            // OTP Input Step
+            // OTP step remains the same
             <form onSubmit={handleOtpSubmit} className="space-y-6">
               <div className="text-center">
                 <h2 className="text-xl font-semibold text-gray-800 mb-2">{t('otpTitle')}</h2>
@@ -201,18 +223,14 @@ export default function Login() {
               </div>
 
               <div>
-                <label htmlFor="otp" className="block text-sm font-medium text-gray-700 mb-2">
-                  OTP
-                </label>
+                <label htmlFor="otp" className="block text-sm font-medium text-gray-700 mb-2">OTP</label>
                 <input
                   type="text"
                   id="otp"
                   value={otp}
                   onChange={(e) => {
                     const value = e.target.value.replace(/\D/g, '');
-                    if (value.length <= 6) {
-                      setOtp(value);
-                    }
+                    if (value.length <= 6) setOtp(value);
                   }}
                   placeholder={t('otpPlaceholder')}
                   className="w-full px-4 py-3 text-black border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0a3d91] focus:border-transparent transition-all duration-200 text-center text-2xl tracking-widest font-mono"
@@ -221,17 +239,8 @@ export default function Login() {
                 />
               </div>
 
-              {error && (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                  <p className="text-red-600 text-sm">{error}</p>
-                </div>
-              )}
-
-              {success && (
-                <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                  <p className="text-green-600 text-sm">{success}</p>
-                </div>
-              )}
+              {error && <div className="bg-red-50 border border-red-200 rounded-lg p-3"><p className="text-red-600 text-sm">{error}</p></div>}
+              {success && <div className="bg-green-50 border border-green-200 rounded-lg p-3"><p className="text-green-600 text-sm">{success}</p></div>}
 
               <div className="space-y-3">
                 <button
@@ -275,7 +284,6 @@ export default function Login() {
             </form>
           )}
         </div>
-
       </div>
     </div>
   );

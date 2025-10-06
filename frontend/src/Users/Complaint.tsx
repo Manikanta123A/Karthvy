@@ -2,10 +2,12 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import type {Complaint}  from '../ComplaintCard'; // Re-using the Complaint interface
 import axios from 'axios';
-
+import toast from 'react-hot-toast';
+import { useTranslation } from '../translationContext';
 
 const Complaints: React.FC = () => {
   const { id } = useParams<{ id: string }>();
+  const {currentLanguage} = useTranslation();
   const navigate = useNavigate();
   const [complaint, setComplaint] = useState<Complaint | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -19,14 +21,21 @@ const Complaints: React.FC = () => {
       return;
     }
     try {
-      const response = await axios.get(`http://localhost:4000/api/complaints/id/${id}`);
+      const response = await axios.post(`http://localhost:4000/api/complaints/id/${id}`,{language:currentLanguage},{withCredentials:true});
       setComplaint(response.data);
       setLoading(false);
 
-    }catch (err) {
+    }catch (err:any) {
+      if(err.response.data.error !== undefined){
+        toast.error(err.response.data.error)
+        navigate("/login");
+      }
+      else{
+      toast.error(err.response.data.message)
       setComplaint(null);
       setError('Failed to fetch complaint details.');
       setLoading(false);
+      }
     }
   }
 

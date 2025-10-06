@@ -12,15 +12,22 @@
   "description": "",
   "dependencies": {
     "@clerk/clerk-js": "^5.85.0",
-    "@prisma/client": "^6.15.0",
+    "@prisma/client": "^6.16.2",
     "@vonage/server-sdk": "^3.24.0",
+    "axios": "^1.12.2",
+    "cloudinary": "^1.41.3",
+    "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "dotenv": "^17.2.1",
     "express": "^5.1.0",
     "expressjs": "^1.0.1",
     "mongodb": "^6.18.0",
     "mongoose": "^8.18.0",
-    "nodemon": "^3.1.10",
-    "prisma": "^6.14.0"
+    "multer": "^2.0.2",
+    "multer-storage-cloudinary": "^4.0.0",
+    "nodemon": "^3.1.10"
+  },
+  "devDependencies": {
+    "prisma": "^6.16.2"
   }
 }

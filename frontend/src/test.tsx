@@ -6,12 +6,9 @@ export default function Test() {
   const { t } = useTranslation();
   const navigator = useNavigate();
 
-  const toggleList = (id: number) => {
-    if (id !== 5) {
-      navigator("/chat");
-    } else {
-      navigator("/complaints"); // Navigate to complaints page
-    }
+  const toggleList = (departmentName: string) => {
+    localStorage.setItem('selectedDepartment', departmentName);
+    navigator('/select-type-subtype');
   };
 
   return (
@@ -31,7 +28,7 @@ export default function Test() {
           {/* Water Dept */}
           <div
             className="department-card bg-white rounded-2xl p-8 w-72 shadow-xl hover:shadow-2xl transition-all duration-500 transform hover:scale-105 hover:-translate-y-2 cursor-pointer group relative overflow-hidden"
-            onClick={() => toggleList(1)}
+            onClick={() => toggleList("Water")}
           >
             <div className="text-6xl mb-4 transition-transform duration-300 group-hover:rotate-12 group-hover:animate-bounce">
               🚰
@@ -47,7 +44,7 @@ export default function Test() {
           {/* Electricity Dept */}
           <div
             className="department-card bg-white rounded-2xl p-8 w-72 shadow-xl hover:shadow-2xl transition-all duration-500 transform hover:scale-105 hover:-translate-y-2 cursor-pointer group relative overflow-hidden"
-            onClick={() => toggleList(2)}
+            onClick={() => toggleList("Electricity")}
           >
             <div className="text-6xl mb-4 transition-transform duration-300 group-hover:rotate-12 group-hover:animate-pulse">
               ⚡
@@ -63,7 +60,7 @@ export default function Test() {
           {/* Municipal Dept */}
           <div
             className="department-card bg-white rounded-2xl p-8 w-72 shadow-xl hover:shadow-2xl transition-all duration-500 transform hover:scale-105 hover:-translate-y-2 cursor-pointer group relative overflow-hidden"
-            onClick={() => toggleList(3)}
+            onClick={() => toggleList("Municipal")}
           >
             <div className="text-6xl mb-4 transition-transform duration-300 group-hover:rotate-12 group-hover:animate-ping">
               🏛️
@@ -79,7 +76,7 @@ export default function Test() {
           {/* Query Dept */}
           <div
             className="department-card bg-white rounded-2xl p-8 w-72 shadow-xl hover:shadow-2xl transition-all duration-500 transform hover:scale-105 hover:-translate-y-2 cursor-pointer group relative overflow-hidden"
-            onClick={() => toggleList(4)}
+            onClick={() => toggleList(t("queryDepartment"))}
           >
             <div className="text-6xl mb-4 transition-transform duration-300 group-hover:rotate-12 group-hover:animate-spin">
               ❓

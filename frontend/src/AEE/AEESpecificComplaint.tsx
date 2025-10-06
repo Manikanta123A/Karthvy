@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useRef } from 'react';
-import JeCard from './complainCard';
-import type { Complaint } from './complainCard';
+import React, { useState, useEffect } from 'react';
+import JeCard from './AeeComplainCard';
+import type { Complaint } from './AeeComplainCard';
 import axios from 'axios';
+import AeeNavBar from './AeeNavbar'; // Import the new JeNavbar component
 import { useTranslation } from '../translationContext';
-import LinemanNav from './linemanNav';
 
-const LinemanAllComplaints: React.FC = () => {
+const AeeSpecificComplaints: React.FC = () => {
   const [complaints, setComplaints] = useState<Complaint[]>([]);
   const {currentLanguage} = useTranslation();
   const [statusFilter, setStatusFilter] = useState<
@@ -17,48 +17,29 @@ const LinemanAllComplaints: React.FC = () => {
 
   const complaintCategory = complaints.length > 0 ? complaints[0].category : null;
 
-  const cache = useRef<{ [key: string]: { complaints: Complaint[], hasMore: boolean, page: number } }>({});
-
   const fetchComplaints = async (pageNumber: number, append: boolean = false) => {
-    const cacheKey = `${statusFilter}-${currentLanguage}`;
-
-    if (!append && cache.current[cacheKey] && cache.current[cacheKey].page >= pageNumber) {
-      const cachedData = cache.current[cacheKey];
-      setComplaints(cachedData.complaints.slice(0, pageNumber * 6));
-      setHasMore(cachedData.hasMore);
-      setLoading(false);
-      return;
-    }
-
     setLoading(true);
     try {
-      const response = await axios.post('http://localhost:4000/api/complaints/Lineman/All',{
+      const response = await axios.post('http://localhost:4000/api/complaints/Aee/specificComplaints',{
           status:statusFilter,
           language:currentLanguage,
           page: pageNumber,
           limit: 6 // Fetch 6 complaints at a time
         },{withCredentials:true});
         const newComplaints: Complaint[] = response.data.complains;
-        const newHasMore: boolean = response.data.hasMore;
-
-        setComplaints((prevComplaints) => {
-          const updatedComplaints = append ? [...prevComplaints, ...newComplaints] : newComplaints;
-
-          cache.current[cacheKey] = {
-            complaints: updatedComplaints,
-            hasMore: newHasMore,
-            page: pageNumber
-          };
-          return updatedComplaints;
-        });
-        setHasMore(newHasMore);
-    } catch (error) {
+        if (append) {
+          setComplaints((prevComplaints) => [...prevComplaints, ...newComplaints]);
+        } else {
+          setComplaints(newComplaints);
+        }
+        setHasMore(newComplaints.length === 6); // Assuming 6 is the limit, if less, no more data
+      } catch (error) {
         console.error('Error fetching complaints:', error);
         setComplaints([]);
         setHasMore(false);
-    } finally {
+      } finally {
         setLoading(false);
-    }
+      }
   };
   useEffect(() => {
     setComplaints([]); // Clear complaints when status filter changes
@@ -95,7 +76,7 @@ const LinemanAllComplaints: React.FC = () => {
 
   return (
     <>
-    <LinemanNav category={complaintCategory?.toLowerCase() as 'electricity' | 'water' | 'municipal' | null}/>
+      < AeeNavBar category={complaintCategory?.toLowerCase() as 'electricity' | 'water' | 'municipal' | null}/> {/* Render the Navbar here */}
       <div className="container mx-auto p-4 pt-20"> {/* Add padding-top to account for fixed navbar */}
         <h2 className="text-2xl font-bold mb-4">All Complaints (JE)</h2>
         <div className="mb-4 flex justify-center">
@@ -124,4 +105,4 @@ const LinemanAllComplaints: React.FC = () => {
   );
 };
 
-export default LinemanAllComplaints;
+export default AeeSpecificComplaints;

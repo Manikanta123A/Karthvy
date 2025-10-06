@@ -12,8 +12,11 @@
 import express from 'express';
 const router = express.Router();
 import AssestController from '../controllers/AssestsController.js';
+import { authenticate, authorizeRole } from '../lib/Authenticate.js';
+import { upload } from '../lib/cloudinary.js';
 
-router.post('/point', AssestController.addPointAsset);
-router.post('/linestring', AssestController.addLineStringAsset);
+router.post('/point',authenticate,authorizeRole("JE") ,upload.array("Images", 1),AssestController.addPointAsset);
+router.post('/linestring',authenticate,authorizeRole("JE"),upload.array("Images", 1), AssestController.addLineStringAsset);
+router.post('/fetchMap',authenticate,authorizeRole("JE"), AssestController.fetchMapAssets);
 
 export default router;

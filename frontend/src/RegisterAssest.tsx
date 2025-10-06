@@ -26,22 +26,16 @@ L.Icon.Default.mergeOptions({
 const RegisterAsset: React.FC = () => {
   const [assetType, setAssetType] = useState<string>("");
   const [assetDetails, setAssetDetails] = useState<string>("");
+  // const [pictures, setPictures] = useState<string>(""); // Removed, as we'll use selectedImages
   const [selectedImages, setSelectedImages] = useState<File[]>([]);
-  const [imagePreview, setImagePreview] = useState<string[]>([]); // Keep this for now to easily remove the JSX later
+  const [imagePreview, setImagePreview] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [drawnItems, setDrawnItems] = useState<any>(null);
   const featureGroupRef = useRef<L.FeatureGroup>(null);
-  const [AssestType, SetAssestType] = useState<string[]>([]);
   const [currentLocation, setCurrentLocation] = useState<
     [number, number] | null
   >(null);
 
-
-  const dropdown: { [key: string]: string[] } = {
-    "Water": ["Pipes", "Water Tanks", "Valves"],
-    "Electricity": ["Poles", "Transformers", "Wires"],
-    "Municipal": ["Street Lights", "Garbage Bins", "Benches"],
-  }
   useEffect(() => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -59,12 +53,6 @@ const RegisterAsset: React.FC = () => {
     } else {
       console.log("Geolocation not supported");
       setCurrentLocation([20.5937, 78.9629]); // fallback
-    }
-
-    const category = localStorage.getItem("category");
-    if (category && dropdown[category]) {
-      setAssetType(dropdown[category][0]);
-      SetAssestType(dropdown[category]);
     }
   }, []);
 
@@ -100,24 +88,28 @@ const RegisterAsset: React.FC = () => {
   };
 
   const handleImageSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]; // Get only the first file
-    if (!file) return;
+    const files = Array.from(event.target.files || []);
+    const imageFiles = files.filter(file => file.type.startsWith('image/'));
 
-    if (!file.type.startsWith('image/')) {
-      alert('Please select an image file.');
+    if (selectedImages.length + imageFiles.length > 5) {
+      alert('Maximum 5 images allowed');
       return;
     }
 
-    setSelectedImages([file]); // Only one image
-    setImagePreview([URL.createObjectURL(file)]); // Only one preview
+    setSelectedImages(prev => [...prev, ...imageFiles]);
+
+    imageFiles.forEach(file => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setImagePreview(prev => [...prev, e.target?.result as string]);
+      };
+      reader.readAsDataURL(file);
+    });
   };
 
-  const removeImage = () => {
-    setSelectedImages([]);
-    setImagePreview([]);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = ""; // Clear the file input
-    }
+  const removeImage = (index: number) => {
+    setSelectedImages(prev => prev.filter((_, i) => i !== index));
+    setImagePreview(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -137,7 +129,7 @@ const RegisterAsset: React.FC = () => {
     formData.append("Details", assetDetails);
 
     selectedImages.forEach((image) => {
-      formData.append("Images", image);
+      formData.append("images", image);
     });
 
     const geometryType = drawnItems.features[0].geometry.type;
@@ -167,7 +159,7 @@ const RegisterAsset: React.FC = () => {
         {
           headers: {
             'Content-Type': 'multipart/form-data',
-          },withCredentials:true
+          },
         }
       );
       console.log("API Response:", response.data);
@@ -195,19 +187,19 @@ const RegisterAsset: React.FC = () => {
   }
 
   return (
-    <div className="flex flex-col min-h-screen p-4 bg-gray-100 dark:bg-gray-900 transition-colors duration-200">
-      <h1 className="text-3xl font-bold text-center mb-6 text-[#0a3d91] dark:text-gray-100">
+    <div className="flex flex-col h-screen p-4 bg-gray-100">
+      <h1 className="text-3xl font-bold text-center mb-6 text-[#0a3d91]">
         Register New Asset
       </h1>
 
-      <div className="flex-grow grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Map Section */}
-        <div className="h-[50vh] lg:h-auto rounded-lg shadow-xl overflow-hidden">
+      <div className="flex-grow flex flex-col lg:flex-row gap-4">
+        {/* Map */}
+        <div className="h-1/2 sm:h-[50vh] md:h-[50vh] lg:h-full lg:w-3/5 flex-grow rounded-lg shadow-md overflow-hidden">
           <MapContainer
             center={currentLocation}
             zoom={13}
             scrollWheelZoom={true}
-            className="w-full h-full rounded-lg"
+            className="w-full h-full"
           >
             <TileLayer
               attribution='&copy; <a href="http://osm.org/copyright">OpenStreetMap</a>'
@@ -247,9 +239,9 @@ const RegisterAsset: React.FC = () => {
           </MapContainer>
         </div>
 
-        {/* Form Section */}
-        <div className="p-6 bg-white dark:bg-gray-800 rounded-lg shadow-xl flex flex-col">
-          <h2 className="text-2xl font-semibold mb-4 text-[#0a3d91] dark:text-gray-100">
+        {/* Form */}
+        <div className="h-1/2 sm:h-[50vh] md:h-[50vh] lg:h-full lg:w-2/5 p-6 bg-white rounded-lg shadow-md flex flex-col">
+          <h2 className="text-2xl font-semibold mb-4 text-[#0a3d91]">
             Asset Details
           </h2>
           <form
@@ -259,68 +251,68 @@ const RegisterAsset: React.FC = () => {
             <div>
               <label
                 htmlFor="assetType"
-                className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+                className="block text-sm font-medium text-gray-700"
               >
                 Asset Type
               </label>
-              <select
+              <input
+                type="text"
                 id="assetType"
                 value={assetType}
                 onChange={(e) => setAssetType(e.target.value)}
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 text-black dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200"
-              >
-                <option value="">Select Asset Type</option>
-                {AssestType.map((type) => (
-                  <option key={type} value={type}>
-                    {type}
-                  </option>
-                ))}
-              </select>
+                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+                required
+              />
             </div>
             <div>
               <label
                 htmlFor="pictures"
-                className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300"
+                className="block text-sm font-medium text-gray-700"
               >
-                Asset Photo (Max 1)
+                Pictures (URL/Text)
               </label>
-              <div className="flex items-center space-x-2">
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  accept="image/*"
-                  onChange={handleImageSelect}
-                  className="hidden"
-                  id="asset-photo-upload"
-                />
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="px-4 py-2 bg-[#0a3d91] text-white rounded-md hover:bg-[#082a6b] transition-colors duration-200 shadow-md"
-                >
-                  Choose File
-                </button>
-                {selectedImages.length > 0 && (
-                  <span className="text-gray-700 dark:text-gray-200 text-sm flex items-center gap-2">
-                    {selectedImages[0].name}
+              <input
+                type="text"
+                id="pictures"
+                value={imagePreview.join(", ")} // Display preview
+                onChange={(e) => {
+                  // This input is for URL/Text, not file upload
+                  // For file upload, we'll use fileInputRef
+                }}
+                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+                placeholder="Add image URLs or text"
+              />
+              <input
+                type="file"
+                ref={fileInputRef}
+                multiple
+                onChange={handleImageSelect}
+                className="mt-2 block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 focus:outline-none file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100"
+              />
+              <div className="mt-4 flex flex-wrap gap-2">
+                {imagePreview.map((url, index) => (
+                  <div key={index} className="relative">
+                    <img
+                      src={url}
+                      alt={`Preview ${index + 1}`}
+                      className="w-20 h-20 object-cover rounded-md"
+                    />
                     <button
                       type="button"
-                      onClick={removeImage}
-                      className="text-red-500 hover:text-red-700 p-1 rounded-full"
+                      onClick={() => removeImage(index)}
+                      className="absolute top-0 right-0 bg-red-500 text-white rounded-full p-1"
                       title="Remove image"
                     >
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                      </svg>
+                      X
                     </button>
-                  </span>
-                )}
+                  </div>
+                ))}
               </div>
             </div>
             <div className="flex-grow">
               <label
                 htmlFor="assetDetails"
-                className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+                className="block text-sm font-medium text-gray-700"
               >
                 Details
               </label>
@@ -329,13 +321,13 @@ const RegisterAsset: React.FC = () => {
                 value={assetDetails}
                 onChange={(e) => setAssetDetails(e.target.value)}
                 rows={4}
-                className="mt-1 block w-full border text-black dark:text-gray-200 dark:bg-gray-700 dark:border-gray-600 rounded-md shadow-sm p-2 flex-grow focus:ring-blue-500 focus:border-blue-500"
+                className="mt-1 block w-full border text-black border-gray-300 rounded-md shadow-sm p-2 flex-grow"
                 required
               ></textarea>
             </div>
             <button
               type="submit"
-              className="w-full bg-[#0a3d91] text-white p-3 rounded-md font-semibold hover:bg-[#082a6b] transition-colors duration-200 shadow-md mt-auto"
+              className="w-full bg-orange-400 text-white p-3 rounded-md font-semibold hover:bg-orange-500 transition-colors"
             >
               Add Asset
             </button>

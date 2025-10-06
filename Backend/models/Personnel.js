@@ -16,16 +16,21 @@ const personnelSchema = new mongoose.Schema({
   role: {
     type: String,
     required: true,
-    enum: ['AEE', 'JE', 'Lineman', 'EE', 'CEE'],
+    enum: ['AEE', 'JE', 'EE', 'CEE'],
   },
   pkpin:{
     type: String,
     required:true
+  },
+  category:{
+    type:String,
+    enum:["Water","Electricity","Municipal"]
   },
   hrDepartmentCode: {
     type: Number,
   },
 }, { timestamps: true });
 
+personnelSchema.index({pkpin:1})
 export const Personnel = mongoose.model('Personnel', personnelSchema);
 

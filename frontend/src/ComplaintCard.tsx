@@ -7,6 +7,8 @@ export interface Complaint {
   kpin: string;
   Images?: string[];         // optional array of image URLs/strings
   problemReport: string;
+  Problem:string,
+  SubProblem:string,
   AssignedWorker?: Types.ObjectId; // ObjectId reference to Personnel
   solutionReport?: string;
   category: "Water" | "Electricity" | "Municipal" | "Query";
@@ -52,7 +54,7 @@ function ComplaintCard({ complaint }: { complaint: Complaint }) {
         await  axios.post(`http://localhost:4000/api/complaints/submit-rating`, { 
           complaintId: complaint._id,
           rating: rating
-         });
+         },{withCredentials:true});
       }catch(err){
         console.error("Error submitting rating:", err);
       }
@@ -73,7 +75,7 @@ function ComplaintCard({ complaint }: { complaint: Complaint }) {
       </div>
       <div className="flex-grow">
         <div className="flex justify-between items-center mb-2">
-          <p className="text-gray-800 text-lg font-semibold flex-grow mr-4">{complaint.problemReport}</p>
+          <p className="text-gray-800 text-lg font-semibold flex-grow mr-4">{complaint.Problem}-{complaint.SubProblem}</p>
           <span className={`px-3 py-1 text-sm font-semibold text-white rounded-full ${getStatusColor(complaint.status)}`}>
             {complaint.status}
           </span>

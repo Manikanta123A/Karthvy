@@ -25,9 +25,11 @@ const userSchema = new mongoose.Schema({
         ref:"Complains"
     }],
     role:{
-        type: String,
+        type:String,
+        default:"user"
     }
 
 });
 
+userSchema.index({AadharNumber:1,kpin:1})
 export const User = mongoose.model('User', userSchema);

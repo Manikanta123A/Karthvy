@@ -54,7 +54,7 @@ const JeCard: React.FC<JeCardProps> = ({ complaint }) => {
   };
 
   const handleClick = () => {
-    navigate(`/Lineman/complaints/${complaint._id}`);
+    navigate(`/Aee/complaints/${complaint._id}`);
   };
 
   return (

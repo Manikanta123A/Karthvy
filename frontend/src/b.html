@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Secure App Client - DEMO MODE</title>
+    <style>
+        /* Basic Styling for Clarity */
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f4f9; color: #333; margin: 20px; }
+        .container { max-width: 800px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        h2 { color: #007bff; }
+        input, button { padding: 10px; margin: 5px 0; border: 1px solid #ccc; border-radius: 4px; display: block; width: 90%; }
+        button { background-color: #28a745; color: white; cursor: pointer; border: none; transition: background-color 0.3s; }
+        button:hover { background-color: #218838; }
+        .auth-section, .action-section, .log-section { border: 1px solid #eee; padding: 15px; margin-bottom: 20px; border-radius: 4px; }
+        #message-display { background-color: #e6f7ff; color: #004085; padding: 10px; border: 1px solid #b8daff; border-radius: 4px; margin-top: 10px; word-wrap: break-word; font-weight: bold; }
+        #notifications { list-style: none; padding: 0; }
+        #notifications li { background-color: #e9ecef; margin-bottom: 5px; padding: 8px; border-radius: 3px; }
+        .error { color: #dc3545; }
+        .success { color: #28a745; }
+        .demo-data-style { background-color: #d4edda; color: #155724; border-color: #c3e6cb; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Node.js/Express Client - **DEMO MODE** 🚀</h1>
+    <div id="message-display">App loaded. Ready for demonstration.</div>
+
+    <div class="auth-section">
+        <h2>User Authentication 🔑</h2>
+        <input type="text" id="username" placeholder="Username (e.g., testuser)">
+        <input type="password" id="password" placeholder="Password (e.g., P@ssword1)">
+        <button onclick="registerUser()">Register (Simulated Success)</button>
+        <button onclick="loginUser()">Login (Generates JWT)</button>
+        <p>Current JWT Token: <span id="jwt-token">None</span></p>
+    </div>
+
+    <hr>
+
+    <div class="action-section">
+        <h2>Access Protected Data 🛡️</h2>
+        <p>This simulates fetching data after successful authentication.</p>
+        <button onclick="getProfileData()">Get User Profile (Simulated Fetch)</button>
+        <div id="profile-data"></div>
+    </div>
+
+    <hr>
+
+    <div class="action-section">
+        <h2>Trigger Back-end Log/Event 📢</h2>
+        <input type="text" id="action-details" placeholder="Enter action details (e.g., 'User Clicked Checkout')">
+        <button onclick="logUserAction()">Log Action (Simulates File Write & Event Emitter)</button>
+    </div>
+
+    <hr>
+
+    <div class="log-section">
+        <h2>Real-time Notifications (Simulated WebSocket) ⚡</h2>
+        <p>Connection Status: <span id="ws-status" class="success">CONNECTED</span></p>
+        <ul id="notifications">
+            </ul>
+    </div>
+</div>
+
+<script>
+    // --- Configuration & Dummy Data ---
+    const DEMO_MODE = true; // Flag to enable/disable dummy data mode
+    const DUMMY_JWT = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjAwMSIsIm5hbWUiOiJNYW5pa2FudGEiLCJpYXQiOjE2ODAxNjY0MDAsImV4cCI6MTY4MDE3MDAwMH0.S1mG_JvF-1GZzF_VzG_0x_qL5gB7yG2m0Gg0Gg0Gg';
+    let jwtToken = localStorage.getItem('jwtToken') || null;
+
+    // PERSONALIZED PROFILE DATA (Simulates a successful fetch)
+    const DEMO_PROFILE_DATA = {
+        message: 'Profile data loaded successfully from a secured endpoint.',
+        userData: {
+            id: 'USER-MK-777',
+            username: 'Manikanta',
+            fullName: 'Gangola Manikanta',
+            email: 'gangolamanikanta@gmail.com',
+            role: 'Application Demo User',
+            lastLogin: new Date().toLocaleString(),
+            data_source: 'Simulated API Response'
+        }
+    };
+
+    // --- DOM Elements ---
+    const tokenDisplay = document.getElementById('jwt-token');
+    const messageDisplay = document.getElementById('message-display');
+    const profileDisplay = document.getElementById('profile-data');
+    const notificationList = document.getElementById('notifications');
+    const wsStatus = document.getElementById('ws-status');
+
+    // Initial update of token display
+    if (jwtToken) {
+        tokenDisplay.textContent = jwtToken.substring(0, 30) + '...';
+        tokenDisplay.classList.remove('error');
+        tokenDisplay.classList.add('success');
+    }
+
+    // --- Utility Functions ---
+
+    /** Displays a message to the user */
+    function displayMessage(message, type = 'info') {
+        messageDisplay.className = ''; 
+        messageDisplay.textContent = message;
+        if (type === 'error') {
+            messageDisplay.classList.add('error');
+        } else if (type === 'success') {
+            messageDisplay.classList.add('success');
+        } else {
+             messageDisplay.classList.add('demo-data-style');
+        }
+    }
+
+    /** Renders the profile data */
+    function renderProfileData(data) {
+        profileDisplay.innerHTML = `
+            <p class="demo-data-style"><strong>Data Fetch Simulated Successfully!</strong></p>
+            <pre class="demo-data-style" style="white-space: pre-wrap; word-wrap: break-word; padding: 10px; border-radius: 4px;">${JSON.stringify(data, null, 2)}</pre>
+        `;
+        displayMessage('User profile simulated successfully.', 'success');
+    }
+
+    /** Simulates a successful WebSocket connection and sends a welcome message */
+    function connectWebSocket() {
+        // In Demo Mode, we immediately show "CONNECTED"
+        wsStatus.textContent = 'CONNECTED';
+        wsStatus.classList.remove('error');
+        wsStatus.classList.add('success');
+        
+        // Add an initial welcome message
+        setTimeout(() => {
+            addNotification({ message: 'Welcome! WebSocket connection simulated for real-time events.' });
+        }, 500);
+    }
+    
+    /** Adds a notification to the list */
+    function addNotification(data) {
+        const li = document.createElement('li');
+        li.textContent = `[${new Date().toLocaleTimeString()}] ${data.message || 'Simulated Event Fired.'}`;
+        notificationList.prepend(li);
+    }
+
+    // Connect WebSocket on script load (Simulated)
+    connectWebSocket();
+
+    // --- Simulated API Interaction Functions ---
+
+    /** Handles user registration (Simulated) */
+    async function registerUser() {
+        const username = document.getElementById('username').value;
+        const password = document.getElementById('password').value;
+
+        if (!username || !password) {
+            return displayMessage('Please enter both username and password.', 'error');
+        }
+        
+        displayMessage('Simulating registration request...', 'info');
+
+        // Simulate network delay
+        setTimeout(() => {
+            displayMessage(`Registration successful for user: ${username} (Simulated 201).`, 'success');
+        }, 1500);
+    }
+
+    /** Handles user login and JWT storage (Simulated) */
+    async function loginUser() {
+        const username = document.getElementById('username').value;
+        const password = document.getElementById('password').value;
+
+        if (!username || !password) {
+            return displayMessage('Please enter both username and password.', 'error');
+        }
+        
+        displayMessage('Simulating login and JWT generation...', 'info');
+
+        // Simulate network delay
+        setTimeout(() => {
+            jwtToken = DUMMY_JWT;
+            localStorage.setItem('jwtToken', jwtToken);
+            tokenDisplay.textContent = jwtToken.substring(0, 30) + '...';
+            tokenDisplay.classList.remove('error');
+            tokenDisplay.classList.add('success');
+            displayMessage('Login successful. **Dummy JWT token stored**.', 'success');
+        }, 2000);
+    }
+
+    /** Accesses the protected profile route (Simulated) */
+    async function getProfileData() {
+        if (!jwtToken) {
+             return displayMessage('Authentication required. Please log in first.', 'error');
+        }
+        
+        profileDisplay.innerHTML = 'Simulating secure data fetch...';
+        displayMessage('Requesting protected profile data...', 'info');
+
+        // Simulate network delay and successful response
+        setTimeout(() => {
+            renderProfileData(DEMO_PROFILE_DATA);
+        }, 1800);
+    }
+
+    /** Triggers the back-end file write and event emitter (Simulated) */
+    async function logUserAction() {
+        const actionDetails = document.getElementById('action-details').value;
+
+        if (!actionDetails) {
+            return displayMessage('Please enter action details to log.', 'error');
+        }
+        
+        if (!jwtToken) {
+            return displayMessage('Authentication required to log an action.', 'error');
+        }
+
+        displayMessage('Simulating file write and event emission on the server...', 'info');
+
+        // 1. Simulate API call success
+        setTimeout(() => {
+            displayMessage('Action log request successful (Simulated 200).', 'success');
+            
+            // 2. Simulate the Event Emitter firing the WebSocket notification 500ms later
+            setTimeout(() => {
+                const notificationMessage = `[File System Operation] Action logged by Manikanta: "${actionDetails}"`;
+                addNotification({ message: notificationMessage });
+                displayMessage('Simulated Event Emitter fired! Check real-time notifications.', 'success');
+            }, 500);
+
+        }, 2000);
+    }
+</script>
+</body>
+</html>

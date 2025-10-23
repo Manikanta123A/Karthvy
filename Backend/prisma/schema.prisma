@@ -39,14 +39,13 @@ model spatial_ref_sys {
 model Language {
   id       Int    @id @default(autoincrement())
   kpin     String @unique
-  hindi    Int?
-  telugu   Int?
-  tamil    Int?
-  kanada   Int?
-  urdu     Int?
-  bengali  Int?
-  marathi  Int?
-  malayam  Int?
+  hindi    Int @default(0)
+  telugu   Int @default(0)
+  tamil    Int @default(0)
+  kannada   Int @default(0)
+  urdu     Int @default(0)
+  marathi  Int @default(0)
+  malayalam  Int @default(0)
 }
 
 model Location {

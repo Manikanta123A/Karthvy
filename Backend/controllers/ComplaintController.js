@@ -42,7 +42,7 @@ export const getMyComplaints = async (req, res) => {
     const skip = (page - 1) * limit;
     
     const complaints = await Complains.find(query)
-      .select('-UserId -kpin -AssignedWorker -AssetId -AssignedJE -AssignedADE -AssignedCE')
+      .select('-UserId -AssignedWorker -AssetId -AssignedJE -AssignedADE -AssignedCE')
       .skip(skip)
       .limit(limit + 1); // Fetch one extra to check if there are more
     
@@ -92,6 +92,7 @@ export const submitRating = async (req, res) => {
       return res.status(404).json({ error: "Complaint not found" });
     }
     complaint.rating = rating;
+    complaint.status = "Closed"
     await complaint.save();
     return res.status(200).json({ message: "Rating submitted successfully" });
   } catch (err) {
@@ -105,17 +106,18 @@ export const submitRating = async (req, res) => {
 export const getComplaintById = async (req, res) => {
   try {
     const { language } = req.body;
+    console.log(language)
     const { id } = req.params;
     if (!id) {
       clearTokenCookie(res)
       return res.status(400).json({ error: "ComplaintId is required" });
     }
-    let complaint = await Complains.findById(id).select('-UserId -kpin -AssignedWorker -AssetId -AssignedJE -AssignedADE -AssignedCE');
+    let complaint = await Complains.findById(id).select('-UserId -AssignedWorker -AssetId -AssignedJE -AssignedADE -AssignedCE');
     if (!complaint) {
       clearTokenCookie(res)
       return res.status(404).json({ error: "Complaint not found" });
     }
-    if(language && language === "en" && language === "english"){
+    if(language && (language === "en" || language === "english")){
       return res.status(200).json(complaint);
     }
     const translateResponse = await axios.post("http://127.0.0.1:8000/translate", {
@@ -202,6 +204,7 @@ export const ViewAllJEComplaints = async (req, res) => {
 
     const skip = (page - 1) * limit;
     let complains = await Complains.find(query)
+     .sort({ isUrgent: -1, createdAt: -1 })
       .skip(skip)
       .limit(limit + 1);
 
@@ -294,6 +297,7 @@ export const ViewAllLinemanComplaints = async (req, res) => {
 
     const skip = (page - 1) * limit;
     let complains = await Complains.find(query)
+     .sort({ isUrgent: -1, createdAt: -1 })
       .skip(skip)
       .limit(limit + 1);
 
@@ -355,16 +359,19 @@ export const ViewLinemanComplaint = async (req, res) => {
     res.status(500).json({ Message: "Internal Server Error" });
   }
 };
-//JE/AEE Writing the Solution to the Complaint (if current level and accesser level is same its fine else error)
 export const WriteSolution = async (req, res) => {
   try {
     const { id, solution } = req.body;
+    const newImageUrls = req.files.map(file => file.path);
     const complain = await Complains.findById(id);
     if (!complain) {
       clearTokenCookie(res)
       return res.status(404).json({ error: "Complaint not found" });
     }
+    complain.Images = [...(complain.Images || []), ...newImageUrls];
+    complain.status = "Resolved"
     complain.solutionReport = solution;
+    complain.closedAt = Date.now()
     await complain.save();
     return res.status(200).json({ message: "Solution updated successfully", compalint: complain });
   } catch (err) {
@@ -372,19 +379,22 @@ export const WriteSolution = async (req, res) => {
     return res.status(500).json({ message: "Internal Server Error" });
   }
 };
-
-//Changing the Status of the complain for ADE and JE
 export const ChangeStatus = async (req, res) => {
   try {
     const { id, status } = req.body;
+    
     const complain = await Complains.findById(id);
     if (!complain) {
       clearTokenCookie(res)
       return res.status(404).json({ error: "Complaint not found" });
     }
     complain.status = status;
-    if (status === "Closed") {
+    if (status === "Resolved") {
       complain.closedAt = Date.now()
+    }
+    if(status === "In-progress"){
+      console.log(status)
+      complain.urgent = false
     }
     await complain.save();
     return res.status(200).json({ message: "Status updated successfully", compalint: complain });
@@ -483,6 +493,38 @@ export const UpshiftProblem = async (req, res) => {
   }
 };
 
+export const mapAsset = async (req, res) => {
+  try {
+    const {complainId, AssestId } = req.body; 
+
+    if (!AssestId || !complainId) {
+      return res.status(400).json({ message: "assetId and complainId are required" });
+    }
+
+    const complain = await Complains.findById(complainId);
+    if (!complain) {
+      return res.status(404).json({ message: "Complain not found" });
+    }
+
+    // Map asset to complain
+    complain.AssetId = AssestId;
+    console.log("hence saved here ")
+    await complain.save();
+
+    return res.status(200).json({
+      message: "Asset successfully mapped to complain",
+      complain,
+    });
+
+  } catch (err) {
+    console.error("Error mapping asset:", err);
+    return res.status(500).json({
+      message: "Internal server error",
+      error: err.message,
+    });
+  }
+};
+
 
 
 
@@ -535,14 +577,17 @@ const prisma = new PrismaClient();
 
 export const createComplaint = async (req, res) => {
   try {
-    const { problemReport, category, Problem, SubProblem, latitude, longitude, currentLevel } = req.body;
+    let { problemReport, category, Problem, SubProblem, latitude, longitude, currentLevel ,urgent} = req.body;
     const imageUrls = req.files.map(file => file.path);
 
-    // Step 1: Get embedding from FastAPI
+
     const embeddingResponse = await axios.post("http://127.0.0.1:8000/embed", { text: problemReport });
     const newEmbedding = embeddingResponse.data.embedding;
 
-    // Step 2: Search for similar complaints in Prisma
+    const ans = await axios.post("http://127.0.0.1:8000/textEnhance",{text:problemReport});
+    problemReport = ans.data.raw_json.text;
+   
+
     const complaints = await prisma.$queryRaw`
   SELECT "complaintId", embedding::text AS embedding_text, "userId"
   FROM "ModeComplaint"
@@ -560,7 +605,7 @@ export const createComplaint = async (req, res) => {
     for (let c of complaints) {
       const embeddingArray = JSON.parse(c.embedding_text);
       const sim = cosineSimilarity(embeddingArray, newEmbedding);
-      if (sim > 0.85) {  // threshold can be tuned
+      if (sim > 0.85) {  
         similarComplaint = c;
         break;
       }
@@ -597,7 +642,11 @@ export const createComplaint = async (req, res) => {
     // Step 3: No similar complaint, create new one
     const userKpinPrefix = req.user.Kpin.substring(0, 6);
     const personnel = await Personnel.findOne({ pkpin: { $regex: `^${userKpinPrefix}` } ,category:category,role:"JE"});
-
+    if(urgent === "true"){
+      urgent = true
+    }else{
+      urgent = false
+    }
     const complaint = new Complains({
       UserId: req.user?._id,
       problemReport,
@@ -609,7 +658,8 @@ export const createComplaint = async (req, res) => {
       longitude,
       kpin: req.user.Kpin,
       AssignedJE: personnel?._id,
-      currentLevel: currentLevel || "JE"
+      currentLevel: currentLevel || "JE",
+      urgent
     });
     await complaint.save();
 

@@ -5,7 +5,7 @@
 import express from 'express';
 import { upload } from '../lib/cloudinary.js';
 const router = express.Router();
-import { AddJE,AssignLineman,ChangeStatus,createComplaint,getComplaintById, getMyComplaints, submitRating, UpshiftProblem, ViewAllJEComplaints, ViewAllLinemanComplaints, viewAllSpecificAEEComplaints, ViewJEComplaint, ViewLinemanComplaint, WriteComment, WriteSolution} from '../controllers/ComplaintController.js';
+import { AddJE,AssignLineman,ChangeStatus,createComplaint,getComplaintById, getMyComplaints, mapAsset, submitRating, UpshiftProblem, ViewAllJEComplaints, ViewAllLinemanComplaints, viewAllSpecificAEEComplaints, ViewJEComplaint, ViewLinemanComplaint, WriteComment, WriteSolution} from '../controllers/ComplaintController.js';
 import { authenticate, authorizeRole } from '../lib/Authenticate.js';
 
 router.post('/my', authenticate,authorizeRole("user"),getMyComplaints);
@@ -19,20 +19,18 @@ router.post('/viewallje', authenticate,authorizeRole("JE"),ViewAllJEComplaints);
 router.post('/viewJeCompalint/:id',authenticate,authorizeRole("JE"),ViewJEComplaint);
 router.post('/writeComment',authenticate,authorizeRole("JE"),WriteComment);
 router.post('/changeStatus',authenticate,authorizeRole('JE'),ChangeStatus);
-router.post('/writeSolution',authenticate,authorizeRole('JE'),WriteSolution);
+router.post('/writeSolution',authenticate,authorizeRole('JE'),upload.array("images",5),WriteSolution);
 router.post('/assignLine',authenticate,authorizeRole('JE'),AssignLineman);
-router.post('/upshift',authenticate,authorizeRole('JE'),UpshiftProblem)
-
-
-
+router.post('/upshift',authenticate,authorizeRole('JE'),UpshiftProblem);
+router.post('/assetmap',authenticate,authorizeRole('JE'),mapAsset);
 
 router.post('/viewallaee', authenticate,authorizeRole("AEE"),ViewAllJEComplaints);
 router.post('/viewAeeCompalint/:id',authenticate,authorizeRole("AEE"),ViewJEComplaint);
 router.post('/Aee/writeComment',authenticate,authorizeRole("AEE"),WriteComment);
 router.post('/Aee/changeStatus',authenticate,authorizeRole('AEE'),ChangeStatus);
-router.post('/Aee/writeSolution',authenticate,authorizeRole('AEE'),WriteSolution);
+router.post('/AeeassignLine',authenticate,authorizeRole('AEE'),AssignLineman);
+router.post('/Aee/writeSolution',authenticate,authorizeRole('AEE'),upload.array("images",5),WriteSolution);
 router.post('/Aee/specificComplaints',authenticate,authorizeRole("AEE"),viewAllSpecificAEEComplaints);
-
 
 router.post('/Lineman/All',authenticate,authorizeRole("lineman"),ViewAllLinemanComplaints);
 router.post('/Lineman/complaints/:id',authenticate,authorizeRole("lineman"),ViewLinemanComplaint);

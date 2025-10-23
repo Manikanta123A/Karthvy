@@ -18,5 +18,6 @@ import { upload } from '../lib/cloudinary.js';
 router.post('/point',authenticate,authorizeRole("JE") ,upload.array("Images", 1),AssestController.addPointAsset);
 router.post('/linestring',authenticate,authorizeRole("JE"),upload.array("Images", 1), AssestController.addLineStringAsset);
 router.post('/fetchMap',authenticate,authorizeRole("JE"), AssestController.fetchMapAssets);
+router.post('/delete',authenticate,authorizeRole('JE'),AssestController.deleteAsset)
 
 export default router;

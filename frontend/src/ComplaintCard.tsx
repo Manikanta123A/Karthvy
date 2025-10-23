@@ -98,10 +98,10 @@ function ComplaintCard({ complaint }: { complaint: Complaint }) {
         </div>
 
 
-        {complaint.comments && (complaint.closedAt == null) && (
+        {complaint.comments && complaint.comments.length !== 0 && (complaint.closedAt == null) && (
           <div className="mt-4 p-3 bg-blue-50 rounded-md border-l-4 border-blue-200">
             <p className="text-blue-700 text-sm font-medium">Personnel Comment:</p>
-            <p className="text-blue-600 text-sm">{complaint.comments[complaint.comments?.length - 1]}</p>
+            <p className="text-blue-600 text-sm">{complaint.comments[complaint.comments.length - 1]}</p>
           </div>
         )}
 

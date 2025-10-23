@@ -136,12 +136,14 @@ const RegisterAsset: React.FC = () => {
     let endpoint = "";
 
     if (geometryType === "Point") {
+      console.log("It is for a point")
       const [longitude, latitude] =
         drawnItems.features[0].geometry.coordinates;
       formData.append("longitude", longitude.toString());
       formData.append("latitude", latitude.toString());
       endpoint = "/api/assets/point";
     } else if (geometryType === "LineString") {
+      console.log("Yes it is for Linestring ")
       const coordinates = drawnItems.features[0].geometry.coordinates;
       formData.append("coordinates", JSON.stringify(coordinates));
       endpoint = "/api/assets/linestring";
@@ -275,7 +277,7 @@ const RegisterAsset: React.FC = () => {
                 type="text"
                 id="pictures"
                 value={imagePreview.join(", ")} // Display preview
-                onChange={(e) => {
+                onChange={() => {
                   // This input is for URL/Text, not file upload
                   // For file upload, we'll use fileInputRef
                 }}

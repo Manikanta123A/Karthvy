@@ -39,14 +39,15 @@ const addPointAsset = async (req, res) => {
 };
 
 const addLineStringAsset = async (req, res) => {
-  const { type, category, kpin, status, Details, coordinates } = req.body;
+  let { type, category, kpin, status, Details, coordinates } = req.body;
 
   try {
     // Cloudinary image URLs from multer
     const uploadedUrls = req.files.map((file) => file.path);
 
     // Format coordinates into LINESTRING
-    const lineString = coordinates.map(([lng, lat]) => `${lng} ${lat}`).join(", ");
+    coordinates = JSON.parse(coordinates);
+    let lineString = coordinates.map(([lng, lat]) => `${lng} ${lat}`).join(", ");
     const geometry = `LINESTRING(${lineString})`;
 
     const result = await prisma.$executeRawUnsafe(
@@ -117,10 +118,36 @@ const fetchMapAssets = async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch map assets', details: error.message });
   }
 };
+const deleteAsset = async (req, res) => {
+  let { assetId } = req.body;
 
+  if (!assetId) {
+    return res.status(400).json({ error: "Asset ID is required" });
+  }
+
+  assetId = Number(assetId)
+  try {
+    const result = await prisma.$executeRawUnsafe(
+      `DELETE FROM "Asset" WHERE id = $1`,
+      assetId
+    );
+
+    if (result === 0) {
+      return res.status(404).json({ error: "Asset not found" });
+    }
+
+    res.status(200).json({ message: `Asset with ID ${assetId} deleted successfully` });
+  } catch (error) {
+    console.error("Error deleting asset:", error);
+    res.status(500).json({ error: "Failed to delete asset", details: error.message });
+  }
+};
 
 export default {
   addPointAsset,
   addLineStringAsset,
   fetchMapAssets,
+  deleteAsset, // ✅ add export here
 };
+
+

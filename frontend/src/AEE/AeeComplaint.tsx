@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, type ChangeEvent } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import type { Complaint } from './AeeComplainCard';
 import axios from 'axios';
@@ -7,6 +7,12 @@ import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet'
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { useTranslation } from '../translationContext';
+import { Plus, X } from "lucide-react";
+
+interface ImagePreview {
+  file: File;
+  url: string;
+}
 
 const AeeComplaint: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -29,6 +35,30 @@ const AeeComplaint: React.FC = () => {
   }
 
   const [linemen, setLinemen] = useState<any[]>([]); 
+
+
+  const [images, setImages] = useState<ImagePreview[]>([]);
+  
+    const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
+      const files = e.target.files ? Array.from(e.target.files) : [];
+      if (images.length + files.length > 5) {
+        alert("You can upload up to 5 images only");
+        return;
+      }
+  
+      const previews = files.map((file) => ({
+        file,
+        url: URL.createObjectURL(file),
+      }));
+  
+      setImages((prev) => [...prev, ...previews]);
+    };
+  
+    const removeImage = (index: number) => {
+      setImages((prev) => prev.filter((_, i) => i !== index));
+    };
+  
+  
   const complaintCache = useRef<{ [key: string]: Complaint | null }>({});
 
 
@@ -38,7 +68,7 @@ const AeeComplaint: React.FC = () => {
 
     try {
       console.log(assignedLineman)
-      await axios.post(`http://localhost:4000/api/complaints/assignLine`, { id: complaint._id, AssignedId: assignedLineman }, {
+      await axios.post(`http://localhost:4000/api/complaints/AeeassignLine`, { id: complaint._id, AssignedId: assignedLineman }, {
         withCredentials: true
       });
       setComplaint(prevComplaint => {
@@ -139,27 +169,33 @@ const AeeComplaint: React.FC = () => {
   };
 
   const handleSolutionSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+    e.preventDefault()
     if (!complaint || !newSolution.trim()) return;
+    const formData = new FormData();
+    formData.append("id", complaint._id);
+    formData.append("solution", newSolution);
+    images.forEach((img) => formData.append("images", img.file));
 
     try {
-      await axios.post(`http://localhost:4000/api/complaints/Aee/writeSolution`, { id:complaint._id,solution: newSolution }, {
+      await axios.post(`http://localhost:4000/api/complaints/writeSolution`, formData, {
         withCredentials: true
       });
       setComplaint(prevComplaint => {
         if (!prevComplaint) return null;
         return {
           ...prevComplaint,
-          solutionReport: newSolution
+          solutionReport: newSolution,
+          status:"Resolved"
         };
       });
       setNewSolution('');
-    } catch (err:any) {
+      setImages([]);
+      alert("Solution submitted successfully");
+    } catch (err: any) {
       console.error('Error reporting solution:', err);
       toast.error(err.response.data.error)
     }
   };
-
   const handleStatusChange = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!complaint) return;
@@ -294,7 +330,7 @@ const AeeComplaint: React.FC = () => {
           </div>
         </div>
 
-        { complaint.currentLevel === 'AEE' &&
+        { complaint.currentLevel === 'AEE' &&!["Resolved", "Closed"].includes(complaint.status) &&
           <div className="p-6 border-t border-gray-200">
           <div className="max-w-4xl mx-auto">
             <h3 className="text-2xl font-bold text-gray-800 mb-6 text-center">Complaint Actions</h3>
@@ -325,26 +361,69 @@ const AeeComplaint: React.FC = () => {
             {/* Solution Report Form - Conditional Rendering */}
             {complaint.status !== 'Closed' && !complaint.solutionReport && (
               <div className="mb-6 p-4 border border-green-200 rounded-md bg-green-50">
-                <h4 className="text-lg font-semibold text-green-800 mb-3">Report Solution</h4>
-                <form onSubmit={handleSolutionSubmit} className="space-y-3">
-                  <div>
-                    <textarea
-                      id="newSolution"
-                      value={newSolution}
-                      onChange={(e) => setNewSolution(e.target.value)}
-                      rows={4}
-                      className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                      placeholder="Write solution here..."
-                    ></textarea>
-                  </div>
-                  <button
-                    type="submit"
-                    className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline transition duration-200"
-                  >
+                  <h4 className="text-lg font-semibold text-green-800 mb-3">
                     Report Solution
-                  </button>
-                </form>
-              </div>
+                  </h4>
+                  <form onSubmit={handleSolutionSubmit} className="space-y-4">
+                    <div>
+                      <textarea
+                        id="newSolution"
+                        value={newSolution}
+                        onChange={(e) => setNewSolution(e.target.value)}
+                        rows={4}
+                        className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                        placeholder="Write solution here..."
+                      ></textarea>
+                    </div>
+
+                    {/* Image Upload Section */}
+                    <div>
+                      <h5 className="text-green-700 font-medium mb-2">Add Images (max 5)</h5>
+                      <div className="flex flex-wrap gap-3">
+                        {images.map((img, index) => (
+                          <div
+                            key={index}
+                            className="relative w-24 h-24 border rounded-lg overflow-hidden shadow-sm"
+                          >
+                            <img
+                              src={img.url}
+                              alt="preview"
+                              className="w-full h-full object-cover"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => removeImage(index)}
+                              className="absolute top-1 right-1 bg-white rounded-full p-1 shadow hover:bg-red-500 hover:text-white"
+                            >
+                              <X size={16} />
+                            </button>
+                          </div>
+                        ))}
+
+                        {/* Add image button */}
+                        {images.length < 5 && (
+                          <label className="w-24 h-24 flex items-center justify-center border-2 border-dashed border-green-400 rounded-lg cursor-pointer hover:bg-green-100 transition">
+                            <Plus className="text-green-600" size={28} />
+                            <input
+                              type="file"
+                              accept="image/*"
+                              multiple
+                              onChange={handleImageChange}
+                              className="hidden"
+                            />
+                          </label>
+                        )}
+                      </div>
+                    </div>
+
+                    <button
+                      type="submit"
+                      className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline transition duration-200"
+                    >
+                      Report Solution
+                    </button>
+                  </form>
+                </div>
             )}
              {complaint.status !== 'Closed' && complaint.AssignedWorker?.length !== 0 && (
                 <div className="mb-6 p-4 border border-purple-200 rounded-md bg-purple-50">
@@ -374,6 +453,7 @@ const AeeComplaint: React.FC = () => {
                     </button>
                   </form>
                 </div>
+              
               )}
 
             {/* Status Change Form - Conditional Rendering */}
@@ -388,7 +468,7 @@ const AeeComplaint: React.FC = () => {
                       onChange={(e) => setNewStatus(e.target.value as Complaint['status'])}
                       className="shadow border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
                     >
-                      {[ 'Pending', 'Assigned', 'visited', 'In-progress', 'Resolved', 'Closed'].map((statusOption) => (
+                      {[ 'Pending','visited', 'In-progress'].map((statusOption) => (
                         <option key={statusOption} value={statusOption}>{statusOption}</option>
                       ))}
                     </select>

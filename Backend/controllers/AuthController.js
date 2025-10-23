@@ -4,12 +4,7 @@ import { Vonage } from "@vonage/server-sdk";
 import { LineMan } from "../models/Lineman.js";
 import { generateToken } from "../lib/jwt.js";
 import { verifyToken } from "../lib/jwt.js";
-// const vonage = new Vonage({
-//   apiKey: process.env.VONAGE_API_KEY || "2a1ff7a6",
-//   apiSecret: process.env.VONAGE_SECRET_KEY
-// });
 
-// const from = "Vonage APIs";
 
 export const login = async (req, res) => {
   try {
@@ -185,3 +180,7 @@ export const logout = (req,res)=>{
     return res.status(500).json({ error: "Internal server error" });
   }
 }
+
+
+
+

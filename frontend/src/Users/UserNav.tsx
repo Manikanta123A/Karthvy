@@ -13,7 +13,7 @@ function UserNav() {
 
   const handleLogout = async () => {
     try {
-      await axios.post('http://localhost:4000/api/auth/logout', {}, { withCredentials: true });
+      await axios.get('http://localhost:4000/api/auth/logout', { withCredentials: true });
       navigate('/login');
     } catch (error) {
       console.error('Logout failed:', error);

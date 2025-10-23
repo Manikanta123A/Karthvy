@@ -29,6 +29,7 @@ const RegisterAsset: React.FC = () => {
   const [selectedImages, setSelectedImages] = useState<File[]>([]);
   const [imagePreview, setImagePreview] = useState<string[]>([]); // Keep this for now to easily remove the JSX later
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [assetIdToDelete, setAssetIdToDelete] = useState<any>("")
   const [drawnItems, setDrawnItems] = useState<any>(null);
   const featureGroupRef = useRef<L.FeatureGroup>(null);
   const [AssestType, SetAssestType] = useState<string[]>([]);
@@ -68,6 +69,25 @@ const RegisterAsset: React.FC = () => {
     }
   }, []);
 
+
+  const handleDelete = async ()=>{
+    try {
+      const response = await axios.post(
+        `http://localhost:4000/api/assets/delete`,{
+          assetId:assetIdToDelete
+        },
+        {
+         withCredentials:true
+        }
+      );
+      console.log("API Response:", response.data);
+      alert("Asset submitted successfully!");
+      
+    } catch (error) {
+      console.error("Error submitting asset:", error);
+      alert("Failed to submit asset. Check console.");
+    }
+  }
   // Map Events Handler
   function MapEvents() {
     useMapEvents({
@@ -199,6 +219,24 @@ const RegisterAsset: React.FC = () => {
       <h1 className="text-3xl font-bold text-center mb-6 text-[#0a3d91] dark:text-gray-100">
         Register New Asset
       </h1>
+
+
+       <div className="mb-4 flex items-center space-x-2">
+        <input
+          type="text"
+          placeholder="Enter Asset ID to delete"
+          value={assetIdToDelete}
+          onChange={(e) => setAssetIdToDelete(e.target.value)}
+          className="flex-grow border border-gray-300 rounded-md p-2 dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600"
+        />
+        <button
+          type="button"
+          onClick={handleDelete}
+          className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-700 transition-colors duration-200"
+        >
+          Delete
+        </button>
+      </div>
 
       <div className="flex-grow grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Map Section */}

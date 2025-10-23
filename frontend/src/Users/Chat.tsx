@@ -12,68 +12,17 @@ function Chat() {
   const [selectedImages, setSelectedImages] = useState<File[]>([]);
   const [imagePreview, setImagePreview] = useState<string[]>([]);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [isUrgent, setIsUrgent] = useState(false);
+
   const { t } = useTranslation();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const micButtonRef = useRef<HTMLButtonElement>(null);
   const sendButtonRef = useRef<HTMLButtonElement>(null);
-  const micIconRef = useRef<HTMLDivElement>(null);
 
-  // WebSocket for AI backend
-
-
-
-  const [isRecording, setIsRecording] = useState(false);
   const [message, setMessage] = useState('');
-  const wsRef = useRef<WebSocket | null>(null);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const audioChunksRef = useRef<Blob[]>([]);
 
-  // Initialize WebSocket once
-  if (!wsRef.current) {
-    wsRef.current = new WebSocket('ws://localhost:8000/ws');
-    wsRef.current.onmessage = (event) => {
-      // Handle transcription or messages here, e.g. append partial transcription
-      console.log('Received:', event.data);
-      setMessage((prev) => prev + event.data + ' ');
-    };
-    wsRef.current.onclose = () => console.log('WebSocket closed');
-    wsRef.current.onerror = (e) => console.error('WebSocket error', e);
-  }
-
-  const startRecording = async () => {
-    if (isRecording) return;
-    setIsRecording(true);
-    audioChunksRef.current = [];
-
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    const mediaRecorder = new MediaRecorder(stream);
-    mediaRecorderRef.current = mediaRecorder;
-
-    mediaRecorder.ondataavailable = (e) => {
-      audioChunksRef.current.push(e.data);
-    };
-
-    mediaRecorder.onstop = () => {
-      const fullBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-      fullBlob.arrayBuffer().then((buffer) => {
-        if (wsRef.current?.readyState === WebSocket.OPEN) {
-          wsRef.current.send(buffer);
-        }
-      });
-    };
-
-    mediaRecorder.start();
-    // Optional mic animation using gsap here
-  };
-
-  const stopRecording = () => {
-    if (!isRecording) return;
-    setIsRecording(false);
-    mediaRecorderRef.current?.stop();
-    mediaRecorderRef.current = null;
-    // Stop mic animation here if any
-  };
+  
+  
 
   const handleImageSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || []);
@@ -120,6 +69,7 @@ function Chat() {
     try {
       const formData = new FormData();
       formData.append("problemReport", message);
+      formData.append('urgent', isUrgent.toString());
       formData.append("category", localStorage.getItem("selectedDepartment") || "");
       formData.append("Problem", localStorage.getItem("selectedType") || "");
       formData.append("SubProblem", localStorage.getItem("selectedSubtype") || "");
@@ -210,6 +160,22 @@ function Chat() {
                 className="w-full h-32 p-4 border-2 text-black border-gray-200 rounded-xl resize-none focus:border-blue-500 focus:outline-none transition-colors duration-300"
               />
             </div>
+            <div className="flex items-center mb-4">
+  <input
+    type="checkbox"
+    id="urgentCheckbox"
+    checked={isUrgent}
+    onChange={() => setIsUrgent(prev => !prev)}
+    className="w-5 h-5 text-red-600 bg-gray-100 border-gray-300 rounded focus:ring-red-500 focus:ring-2"
+  />
+  <label
+    htmlFor="urgentCheckbox"
+    className="ml-2 text-sm font-medium text-black cursor-pointer"
+  >
+    Mark as Urgent
+  </label>
+</div>
+
 
             {/* Image Upload Section */}
             <div className="mb-6">
@@ -258,32 +224,6 @@ function Chat() {
 
             {/* Action Buttons */}
             <div className="flex md:gap-4 gap-2">
-              {/* Voice Input Button */}
-              <button
-                ref={micButtonRef}
-                onClick={isRecording ? stopRecording : startRecording}
-                className={`flex-1 flex items-center justify-center gap-2 md:py-3 py-2 px-3 md:px-6 rounded-xl font-semibold transition-all duration-300 ${isRecording
-                  ? 'bg-red-500 text-white shadow-lg scale-105'
-                  : 'bg-gray-400 text-black hover:bg-gray-200'
-                  }`}
-              >
-                <div ref={micIconRef} className="w-5 h-5">
-                  {isRecording ? (
-                    <svg fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M12 2c-1.1 0-2 .9-2 2v6c0 1.1.9 2 2 2s2-.9 2-2V4c0-1.1-.9-2-2-2z" />
-                      <path d="M19 10v2c0 3.87-3.13 7-7 7s-7-3.13-7-7v-2c0-.55.45-1 1-1s1 .45 1 1v2c0 2.76 2.24 5 5 5s5-2.24 5-5v-2c0-.55.45-1 1-1s1 .45 1 1z" />
-                      <path d="M12 20c.55 0 1-.45 1-1v-2c0-.55-.45-1-1-1s-1 .45-1 1v2c0 .55.45 1 1 1z" />
-                    </svg>
-                  ) : (
-                    <svg fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M12 2c-1.1 0-2 .9-2 2v6c0 1.1.9 2 2 2s2-.9 2-2V4c0-1.1-.9-2-2-2z" />
-                      <path d="M19 10v2c0 3.87-3.13 7-7 7s-7-3.13-7-7v-2c0-.55.45-1 1-1s1 .45 1 1v2c0 2.76 2.24 5 5 5s5-2.24 5-5v-2c0-.55.45-1 1-1s1 .45 1 1z" />
-                      <path d="M12 20c.55 0 1-.45 1-1v-2c0-.55-.45-1-1-1s-1 .45-1 1v2c0 .55.45 1 1 1z" />
-                    </svg>
-                  )}
-                </div>
-                {isRecording ? t('stopRecording') : t('voiceInput')}
-              </button>
 
               {/* Send Button */}
               <button

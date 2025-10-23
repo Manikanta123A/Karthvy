@@ -10,7 +10,6 @@ export default function Test() {
     localStorage.setItem('selectedDepartment', departmentName);
     navigator('/select-type-subtype');
   };
-
   return (
     <div className="font-sans relative min-h-screen bg-gradient-to-b from-blue-50 via-white to-blue-50">
       {/* Desktop Navbar */}
@@ -76,7 +75,7 @@ export default function Test() {
           {/* Query Dept */}
           <div
             className="department-card bg-white rounded-2xl p-8 w-72 shadow-xl hover:shadow-2xl transition-all duration-500 transform hover:scale-105 hover:-translate-y-2 cursor-pointer group relative overflow-hidden"
-            onClick={() => toggleList(t("queryDepartment"))}
+            onClick={() => toggleList("Query")}
           >
             <div className="text-6xl mb-4 transition-transform duration-300 group-hover:rotate-12 group-hover:animate-spin">
               ❓
@@ -91,6 +90,6 @@ export default function Test() {
         </div>
       </div>
 
-          </div>
+    </div>
   );
 }

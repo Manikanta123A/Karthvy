@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, type ChangeEvent } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import type { Complaint } from './jeCard';
 import axios from 'axios';
@@ -7,6 +7,12 @@ import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet'
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { useTranslation } from '../translationContext';
+import { Plus, X } from "lucide-react";
+
+interface ImagePreview {
+  file: File;
+  url: string;
+}
 
 const JeComplaint: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -22,6 +28,7 @@ const JeComplaint: React.FC = () => {
   const [assignedLineman, setAssignedLineman] = useState<string>('');
   const [upshiftReason, setUpshiftReason] = useState<string>('');
   const [mapAssets, setMapAssets] = useState<any[]>([]);
+  const [assestId, setAssestId] = useState<any>(" ");
   const [runEffect, setRunEffect] = useState<boolean>(false);
   const [selectedAssetType, setSelectedAssetType] = useState<string>('All');
   const dropdown: { [key: string]: string[] } = {
@@ -29,9 +36,33 @@ const JeComplaint: React.FC = () => {
     "Electricity": ["Poles", "Transformers", "Wires"],
     "Municipal": ["Street Lights", "Garbage Bins", "Benches"],
   }
-  const [linemen, setLinemen] = useState<any[]>([]); // New state for linemen
+  const [linemen, setLinemen] = useState<any[]>([]);
 
   const complaintCache = useRef<{ [key: string]: Complaint | null }>({});
+
+  const [images, setImages] = useState<ImagePreview[]>([]);
+
+  const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files ? Array.from(e.target.files) : [];
+    if (images.length + files.length > 5) {
+      alert("You can upload up to 5 images only");
+      return;
+    }
+
+    const previews = files.map((file) => ({
+      file,
+      url: URL.createObjectURL(file),
+    }));
+
+    setImages((prev) => [...prev, ...previews]);
+  };
+
+  const removeImage = (index: number) => {
+    setImages((prev) => prev.filter((_, i) => i !== index));
+  };
+
+
+
 
   const fetchComplaint = async () => {
     if (!id) {
@@ -54,7 +85,7 @@ const JeComplaint: React.FC = () => {
       });
       const fetchedComplaint = response.data.complaint;
       setComplaint(fetchedComplaint);
-      setLinemen(response.data.linemen); 
+      setLinemen(response.data.linemen);
       console.log(response.data.linemen);
       complaintCache.current[cacheKey] = fetchedComplaint;
       setLoading(false);
@@ -120,21 +151,28 @@ const JeComplaint: React.FC = () => {
   };
 
   const handleSolutionSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+    e.preventDefault()
     if (!complaint || !newSolution.trim()) return;
+    const formData = new FormData();
+    formData.append("id", complaint._id);
+    formData.append("solution", newSolution);
+    images.forEach((img) => formData.append("images", img.file));
 
     try {
-      await axios.post(`http://localhost:4000/api/complaints/writeSolution`, { id: complaint._id, solution: newSolution }, {
+      await axios.post(`http://localhost:4000/api/complaints/writeSolution`, formData, {
         withCredentials: true
       });
       setComplaint(prevComplaint => {
         if (!prevComplaint) return null;
         return {
           ...prevComplaint,
-          solutionReport: newSolution
+          solutionReport: newSolution,
+          status:"Resolved"
         };
       });
       setNewSolution('');
+      setImages([]);
+      alert("Solution submitted successfully");
     } catch (err: any) {
       console.error('Error reporting solution:', err);
       toast.error(err.response.data.error)
@@ -175,7 +213,7 @@ const JeComplaint: React.FC = () => {
         if (!prevComplaint) return null;
         return {
           ...prevComplaint,
-          AssignedWorker: assignedLineman 
+          AssignedWorker: assignedLineman
         };
       });
     } catch (err: any) {
@@ -184,6 +222,27 @@ const JeComplaint: React.FC = () => {
     }
   };
 
+
+  const handleMapAssest = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!complaint || !assestId) return;
+
+    try {
+      await axios.post(`http://localhost:4000/api/complaints/assetmap`, { complainId: complaint._id, AssestId: assestId }, {
+        withCredentials: true
+      });
+      setComplaint(prevComplaint => {
+        if (!prevComplaint) return null;
+        return {
+          ...prevComplaint,
+          AssetId: assestId
+        };
+      });
+    } catch (err: any) {
+      toast.error(err.response.data.error)
+      console.error('Error assigning lineman:', err);
+    }
+  }
   const handleUpshiftSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!complaint || !upshiftReason.trim()) return;
@@ -270,6 +329,9 @@ const JeComplaint: React.FC = () => {
             <h2 className="text-2xl font-bold text-gray-800 mb-3">{complaint.Problem}</h2>
             <h3 className="text-2xl font-bold text-gray-800 mb-3">{complaint.SubProblem}</h3>
             <p className="text-gray-700 text-lg leading-relaxed">{complaint.problemReport}</p>
+            {complaint.AssetId &&
+              <p className="text-gray-700 text-lg leading-relaxed">AssetId : {complaint.AssetId} </p>
+            }
 
             <div className="mt-5">
               <p className="text-gray-600 text-sm"><strong className="text-gray-800">Category:</strong> {complaint.category}</p>
@@ -294,6 +356,8 @@ const JeComplaint: React.FC = () => {
                 </div>
               </div>
             )}
+
+
           </div>
 
           <div>
@@ -324,12 +388,37 @@ const JeComplaint: React.FC = () => {
           </div>
         </div>
 
-        {complaint.currentLevel === 'JE' && (<>
+        {complaint.currentLevel === 'JE' &&  !["Resolved", "Closed"].includes(complaint.status)  && (<>
           <div className="p-6 border-t border-gray-200">
             <div className="max-w-4xl mx-auto">
               <h3 className="text-2xl font-bold text-gray-800 mb-6 text-center">Complaint Actions</h3>
 
-              {/* Add Comment Form */}
+
+
+
+              <div className="mb-6 p-4 border border-gray-200 rounded-md bg-gray-50">
+                <h4 className="text-lg font-semibold text-gray-700 mb-3">Assest Id</h4>
+                <form onSubmit={handleMapAssest} className="space-y-3">
+                  <div>
+                    <textarea
+                      id="assestId"
+                      value={assestId}
+                      onChange={(e) => setAssestId(e.target.value)}
+                      rows={1}
+                      className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                      placeholder="Enter Assest Id "
+                    ></textarea>
+                  </div>
+                  <button
+                    type="submit"
+                    className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline transition duration-200"
+                  >
+                    Map It
+                  </button>
+                </form>
+              </div>
+
+
               <div className="mb-6 p-4 border border-gray-200 rounded-md bg-gray-50">
                 <h4 className="text-lg font-semibold text-gray-700 mb-3">Add a New Comment</h4>
                 <form onSubmit={handleCommentSubmit} className="space-y-3">
@@ -352,11 +441,12 @@ const JeComplaint: React.FC = () => {
                 </form>
               </div>
 
-              {/* Solution Report Form - Conditional Rendering */}
               {complaint.status !== 'Closed' && !complaint.solutionReport && (
                 <div className="mb-6 p-4 border border-green-200 rounded-md bg-green-50">
-                  <h4 className="text-lg font-semibold text-green-800 mb-3">Report Solution</h4>
-                  <form onSubmit={handleSolutionSubmit} className="space-y-3">
+                  <h4 className="text-lg font-semibold text-green-800 mb-3">
+                    Report Solution
+                  </h4>
+                  <form onSubmit={handleSolutionSubmit} className="space-y-4">
                     <div>
                       <textarea
                         id="newSolution"
@@ -367,6 +457,47 @@ const JeComplaint: React.FC = () => {
                         placeholder="Write solution here..."
                       ></textarea>
                     </div>
+
+                    {/* Image Upload Section */}
+                    <div>
+                      <h5 className="text-green-700 font-medium mb-2">Add Images (max 5)</h5>
+                      <div className="flex flex-wrap gap-3">
+                        {images.map((img, index) => (
+                          <div
+                            key={index}
+                            className="relative w-24 h-24 border rounded-lg overflow-hidden shadow-sm"
+                          >
+                            <img
+                              src={img.url}
+                              alt="preview"
+                              className="w-full h-full object-cover"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => removeImage(index)}
+                              className="absolute top-1 right-1 bg-white rounded-full p-1 shadow hover:bg-red-500 hover:text-white"
+                            >
+                              <X size={16} />
+                            </button>
+                          </div>
+                        ))}
+
+                        {/* Add image button */}
+                        {images.length < 5 && (
+                          <label className="w-24 h-24 flex items-center justify-center border-2 border-dashed border-green-400 rounded-lg cursor-pointer hover:bg-green-100 transition">
+                            <Plus className="text-green-600" size={28} />
+                            <input
+                              type="file"
+                              accept="image/*"
+                              multiple
+                              onChange={handleImageChange}
+                              className="hidden"
+                            />
+                          </label>
+                        )}
+                      </div>
+                    </div>
+
                     <button
                       type="submit"
                       className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline transition duration-200"
@@ -377,7 +508,6 @@ const JeComplaint: React.FC = () => {
                 </div>
               )}
 
-              {/* Status Change Form - Conditional Rendering */}
               {complaint.status !== 'Closed' && (
                 <div className="mb-6 p-4 border border-yellow-200 rounded-md bg-yellow-50">
                   <h4 className="text-lg font-semibold text-yellow-800 mb-3">Change Complaint Status</h4>
@@ -389,7 +519,7 @@ const JeComplaint: React.FC = () => {
                         onChange={(e) => setNewStatus(e.target.value as Complaint['status'])}
                         className="shadow border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
                       >
-                        {['Pending', 'Assigned', 'visited', 'In-progress', 'Resolved', 'Closed'].map((statusOption) => (
+                        {['Pending','visited', 'In-progress'].map((statusOption) => (
                           <option key={statusOption} value={statusOption}>{statusOption}</option>
                         ))}
                       </select>
@@ -404,8 +534,7 @@ const JeComplaint: React.FC = () => {
                 </div>
               )}
 
-              {/* Lineman Assignment Form - Conditional Rendering */}
-              {complaint.status !== 'Closed' && (
+              {complaint.status !== 'Closed' &&  (
                 <div className="mb-6 p-4 border border-purple-200 rounded-md bg-purple-50">
                   <h4 className="text-lg font-semibold text-purple-800 mb-3">Assign Lineman</h4>
                   <form onSubmit={handleLinemanAssignment} className="space-y-3">
@@ -461,122 +590,121 @@ const JeComplaint: React.FC = () => {
               )}
             </div>
           </div>
-          
-        
-        
-        <div className="p-6 border-t border-gray-200 mt-6">
-          <h3 className="text-2xl font-bold text-gray-800 mb-4 text-center">Assets in 200m Radius</h3>
-          <div className="mb-4">
-            <label htmlFor="assetTypeFilter" className="block text-gray-700 text-sm font-bold mb-2">Filter by Asset Type:</label>
-            <select
-              id="assetTypeFilter"
-              value={selectedAssetType}
-              onChange={(e) => setSelectedAssetType(e.target.value)}
-              className="shadow border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-            >
-              <option value="All">All Types</option>
-              {/* You would dynamically load asset types from your backend */}
-              {
-                AssetType.map((t) => (
-                  <option key={t} value={t}>{t}</option>
-                ))
-              }
-            </select>
-          </div>
-          {complaint.latitude && complaint.longitude ? (
-            <MapContainer
-              center={[parseFloat(complaint.latitude), parseFloat(complaint.longitude)]}
-              zoom={15}
-              style={{ height: '500px', width: '100%' }}
-              className="rounded-md shadow-md"
-            >
-              <TileLayer
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-              />
 
-              {mapAssets.map((asset) => {
-                if (asset.geometry?.type === "Point") {
-                  const [lng, lat] = asset.geometry.coordinates; // GeoJSON order is [lng, lat]
-                  return (
-                    <Marker
-                      key={asset.id}
-                      position={[lat, lng]}
-                      icon={
-                        new L.Icon({
-                          iconUrl:
-                            "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png",
-                          iconRetinaUrl:
-                            "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png",
-                          shadowUrl:
-                            "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
-                          iconSize: [25, 41],
-                          iconAnchor: [12, 41],
-                          popupAnchor: [1, -34],
-                          shadowSize: [41, 41],
-                        })
-                      }
-                    >
-                      <Popup>
-                        <div>
-                          <strong>Type:</strong> {asset.type}
-                          <br />
-                          <strong>Category:</strong> {asset.category}
-                          <br />
-                          <strong>Status:</strong> {asset.status}
-                        </div>
-                      </Popup>
-                    </Marker>
-                  );
-                } else if (asset.geometry?.type === "LineString") {
-                  const latlngs = asset.geometry.coordinates.map(
-                    ([lng, lat]: [number, number]) => [lat, lng] // swap order
-                  );
-                  return (
-                    <Polyline key={asset.id} positions={latlngs} color="blue">
-                      <Popup>
-                        <div>
-                          <strong>Type:</strong> {asset.type}
-                          <br />
-                          <strong>Category:</strong> {asset.category}
-                          <br />
-                          <strong>Status:</strong> {asset.status}
-                        </div>
-                      </Popup>
-                    </Polyline>
-                  );
-                }
-                return null;
-              })}
 
-              {/* Marker for the complaint location */}
-              <Marker
-                position={[
-                  parseFloat(complaint.latitude),
-                  parseFloat(complaint.longitude),
-                ]}
-                icon={
-                  new L.Icon({
-                    iconUrl:
-                      "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png",
-                    shadowUrl:
-                      "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
-                    iconSize: [25, 41],
-                    iconAnchor: [12, 41],
-                    popupAnchor: [1, -34],
-                    shadowSize: [41, 41],
-                  })
-                }
+
+          <div className="p-6 border-t border-gray-200 mt-6">
+            <h3 className="text-2xl font-bold text-gray-800 mb-4 text-center">Assets in 200m Radius</h3>
+            <div className="mb-4">
+              <label htmlFor="assetTypeFilter" className="block text-gray-700 text-sm font-bold mb-2">Filter by Asset Type:</label>
+              <select
+                id="assetTypeFilter"
+                value={selectedAssetType}
+                onChange={(e) => setSelectedAssetType(e.target.value)}
+                className="shadow border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
               >
-                <Popup>Complaint Location</Popup>
-              </Marker>
-            </MapContainer>
-          ) : (
+                <option value="All">All Types</option>
+                {
+                  AssetType.map((t) => (
+                    <option key={t} value={t}>{t}</option>
+                  ))
+                }
+              </select>
+            </div>
+            {complaint.latitude && complaint.longitude ? (
+              <MapContainer
+                center={[parseFloat(complaint.latitude), parseFloat(complaint.longitude)]}
+                zoom={15}
+                style={{ height: '500px', width: '100%' }}
+                className="rounded-md shadow-md"
+              >
+                <TileLayer
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                />
 
-            <div className="text-center text-gray-600">Complaint location not available to display map.</div>
-          )}
-        </div> </>) }
-      
+                {mapAssets.map((asset) => {
+                  if (asset.geometry?.type === "Point") {
+                    const [lng, lat] = asset.geometry.coordinates; // GeoJSON order is [lng, lat]
+                    return (
+                      <Marker
+                        key={asset.id}
+                        position={[lat, lng]}
+                        icon={
+                          new L.Icon({
+                            iconUrl:
+                              "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png",
+                            iconRetinaUrl:
+                              "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png",
+                            shadowUrl:
+                              "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
+                            iconSize: [25, 41],
+                            iconAnchor: [12, 41],
+                            popupAnchor: [1, -34],
+                            shadowSize: [41, 41],
+                          })
+                        }
+                      >
+                        <Popup>
+                          <div>
+                            <strong>Type:</strong> {asset.type}
+                            <br />
+                            <strong>Id</strong> {asset.id}
+                            <br />
+                            <strong>Status:</strong> {asset.Details}
+                          </div>
+                        </Popup>
+                      </Marker>
+                    );
+                  } else if (asset.geometry?.type === "LineString") {
+                    const latlngs = asset.geometry.coordinates.map(
+                      ([lng, lat]: [number, number]) => [lat, lng] // swap order
+                    );
+                    return (
+                      <Polyline key={asset.id} positions={latlngs} color="blue">
+                        <Popup>
+                          <div>
+                            <strong>Type:</strong> {asset.type}
+                            <br />
+                            <strong>Id</strong> {asset.id}
+                            <br />
+                            <strong>Status:</strong> {asset.Details}
+                          </div>
+                        </Popup>
+                      </Polyline>
+                    );
+                  }
+                  return null;
+                })}
+
+                {/* Marker for the complaint location */}
+                <Marker
+                  position={[
+                    parseFloat(complaint.latitude),
+                    parseFloat(complaint.longitude),
+                  ]}
+                  icon={
+                    new L.Icon({
+                      iconUrl:
+                        "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png",
+                      shadowUrl:
+                        "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
+                      iconSize: [25, 41],
+                      iconAnchor: [12, 41],
+                      popupAnchor: [1, -34],
+                      shadowSize: [41, 41],
+                    })
+                  }
+                >
+                  <Popup>Complaint Location</Popup>
+                </Marker>
+              </MapContainer>
+            ) : (
+
+              <div className="text-center text-gray-600">Complaint location not available to display map.</div>
+            )}
+          </div> </>)}
+
       </div>
     </div>
   );

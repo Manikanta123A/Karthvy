@@ -12,6 +12,7 @@ interface TranslationContextProps {
 
 const TranslationContext = createContext<TranslationContextProps | undefined>(undefined);
 
+
 export const TranslationProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentLanguage, setCurrentLanguage] = useState<LanguageCode>(() => {
     const storedLanguage = localStorage.getItem('selectedLanguage');
@@ -27,7 +28,9 @@ export const TranslationProvider: React.FC<{ children: React.ReactNode }> = ({ c
   };
 
   const t = (key: keyof typeof translations["english"], options?: { [key: string]: string }) => {
-    let translated = translations[currentLanguage]?.[key] || translations["english"][key];
+    const currentTranslations = translations[currentLanguage] as Record<string, string> | undefined;
+    const englishTranslations = translations["english"] as Record<string, string>;
+    let translated = currentTranslations?.[key as string] || englishTranslations[key as string] || "";
     if (options) {
       for (const [k, value] of Object.entries(options)) {
         translated = translated.replace(new RegExp(`{{${k}}}`, 'g'), value);
